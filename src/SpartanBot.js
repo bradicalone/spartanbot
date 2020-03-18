@@ -1,4 +1,4 @@
-import { Account } from 'oip-account'
+// import { Account } from 'oip-account'
 import uid from 'uid';
 import moment from 'moment'
 import EventEmitter from 'eventemitter3'
@@ -58,39 +58,8 @@ class SpartanBot {
 
 		// Try to load state from LocalStorage if we are not memory only
 		if (!this.settings.memory){
-
-			this._deserialize = this.deserialize().then(() => {
-				//check first to see if a mnemonic was passed in and load the wallet from there
-				if (this.settings.mnemonic) {
-					this.wallet = new Account(this.settings.mnemonic, undefined, {discover: false})
-					//set mnemonic to undefined so it doesn't get serialize
-					this.settings.mnemonic = undefined
-					//wallet.login return promise
-					this._wallet_login = this.wallet.login()
-					//set the account identifier
-					this._wallet_login.then((data) => {
-						this.oip_account = data.identifier
-						this.serialize()
-					}).catch(err => {console.log('Error resolving wallet login: ', err)})
-
-					// If we are not memory only, load the wallet using OIP Account
-					// Check if the oip_account has been created
-				} else if (this.oip_account){
-
-					// Login to the wallet
-					this.wallet = new Account(this.oip_account, undefined, {discover: false})
-					this._wallet_login = this.wallet.login()
-				} else {
-					this.wallet = new Account(undefined, undefined, {discover: false})
-
-					// Create and save wallet
-					this._wallet_create = this.wallet.create().then((wallet_info) => {
-						// Save the identifier to the localstorage
-						this.oip_account = wallet_info.identifier
-						this.serialize()
-					})
-				}
-			})
+			// Save the settings to the localstorage
+			this.serialize()
 		}
 	}
 
@@ -642,8 +611,8 @@ class SpartanBot {
 	 */
 	returnPools() {
 		if (this.getRentalProviders().length === 0) {
-			this._setPools = []
-			return []
+			this._setPools([])
+			return this.pools
 		}
 		let pools = []
 		let poolIDs = []
@@ -758,7 +727,9 @@ class SpartanBot {
 	 */
 	returnPoolProfiles() {
 		if (this.getRentalProviders().length === 0) {
-			this._setPoolProfiles = []
+			// this._setPoolProfiles() = []
+			// return []
+			this._setPoolProfiles([])
 			return []
 		}
 
@@ -853,7 +824,7 @@ class SpartanBot {
 		}
 
 		serialized.settings = this.settings
-		serialized.oip_account = this.oip_account
+		// serialized.oip_account = this.oip_account
 		serialized.pools = this.pools
 		serialized.poolProfiles = this.poolProfiles
 		serialized.receipts = this.receipts
@@ -882,9 +853,9 @@ class SpartanBot {
 		if (data_from_storage.settings)
 			this.settings = {...data_from_storage.settings, ...this.settings}
 
-		if (data_from_storage.oip_account){
-			this.oip_account = data_from_storage.oip_account
-		}
+		// if (data_from_storage.oip_account){
+		// 	this.oip_account = data_from_storage.oip_account
+		// }
 
 		if (data_from_storage.pools){
 			this.pools = data_from_storage.pools
