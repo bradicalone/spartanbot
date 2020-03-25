@@ -73,7 +73,7 @@ class NiceHashProvider extends RentalProvider {
 		if (!options.host || !options.port || !options.user || !options.pass) {
 			return {
 				success: false,
-				message: 'must provide all of the following: pool_host, pool_port, pool_user, pool_pass'
+				message: 'must provide all of the following: host, port, user, pass'
 			}
 		}
 		let pool = {...options, market: this.getInternalType(), providerUID: this.getUID()};
@@ -81,14 +81,16 @@ class NiceHashProvider extends RentalProvider {
 		this._setActivePool(pool.id)
 		try {
 			let res = await this.api.createOrEditPool(options);
-	  
 			if (res.success) {
-			  pool = res.data;
+				pool = res;
+			} else {
+				res.message = "User input is more than likely wrong. Check console for error."
+				pool = res
 			}
-		  } catch (err) {
-			throw new Error("Failed to create pool: ".concat(err));
-		  }
-		return pool
+		} catch (err) {
+			  throw new Error("Failed to create pool: ".concat(err));
+		}
+		return pool;
 	}
 
 	/**
