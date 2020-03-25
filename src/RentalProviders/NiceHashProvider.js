@@ -69,8 +69,8 @@ class NiceHashProvider extends RentalProvider {
 	 * @param {string|number} [options.location=0] - 0 for Europe (NiceHash), 1 for USA (WestHash);
 	 * @return {Object}
 	 */
-	_createPool(options) {
-		if (!options.pool_host || !options.pool_port || !options.pool_user || !options.pool_pass) {
+	async _createPool(options) {
+		if (!options.host || !options.port || !options.user || !options.pass) {
 			return {
 				success: false,
 				message: 'must provide all of the following: pool_host, pool_port, pool_user, pool_pass'
@@ -79,6 +79,15 @@ class NiceHashProvider extends RentalProvider {
 		let pool = {...options, market: this.getInternalType(), providerUID: this.getUID()};
 		this._addPools(pool)
 		this._setActivePool(pool.id)
+		try {
+			let res = await this.api.createOrEditPool(options);
+	  
+			if (res.success) {
+			  pool = res.data;
+			}
+		  } catch (err) {
+			throw new Error("Failed to create pool: ".concat(err));
+		  }
 		return pool
 	}
 

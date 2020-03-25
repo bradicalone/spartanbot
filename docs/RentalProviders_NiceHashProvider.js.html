@@ -99,11 +99,12 @@ import {ERROR, NORMAL, WARNING, LOW_LIMIT, LOW_BALANCE, CUTOFF} from "../constan
 class NiceHashProvider extends RentalProvider {
 	constructor(settings) {
 		super(settings)
-
+		this.locale = settings.locale;
 		this.api_key = settings.api_key || settings.key;
-		this.api_id = settings.api_id || settings.id
-
-		this.api = new NiceHash(this.api_key, this.api_id)
+		this.api_secret = settings.api_secret;
+		this.api_id = settings.api_id || settings.id;
+		
+		this.api = new NiceHash(settings)
 	}
 
 	/**
