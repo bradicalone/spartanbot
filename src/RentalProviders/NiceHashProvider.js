@@ -160,7 +160,13 @@ class NiceHashProvider extends RentalProvider {
 	 * @return {Array.<Object>}
 	 */
 	async _getPools() {
-		return await this.pools
+		try {
+			let pool = await this.api.getPools();
+			return pool
+		} catch (e) {
+			console.log('e:', e)
+			return e
+		}
 	}
 
 	_addPools(pools) {

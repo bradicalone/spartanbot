@@ -310,10 +310,16 @@ class SpartanBot {
 		} else if (settings.type === "NiceHash") {
 			process.env.NICEHASH_API_KEY = settings.api_key || settings.key
 			process.env.NICEHASH_API_ID = settings.api_id || settings.id
-
-			if (settings.pools) {
-				new_provider.setPools(settings.pools)
-			}
+			try {
+                pools = await new_provider.getPools()
+            } catch( e ) {
+                pools = [{
+                    success: false,
+                    message: 'pools not found',
+                    e
+                }];
+            }
+            new_provider.setPools(pools);
 		}
 
 		// Save new Provider
@@ -546,7 +552,8 @@ class SpartanBot {
 	async deletePool(id) {
 		let poolDelete = []
 		for (let p of this.getRentalProviders()) {
-			let pools = p.returnPools();
+			//p.name works for returnPools(p.name)
+			let pools = p.returnPools(p.name);
 			for (let pool of pools) {
 				if (pool.id === id || pool.mrrID === id) {
 					try {
@@ -607,27 +614,32 @@ class SpartanBot {
 
 	/**
 	 * Gather and Return the pools set in the RentalProvider's local variable, this.pools
+	 * @param {(string)} providerType - name of provider you wish to return poos for
 	 * @return {Array.<Object>}
 	 */
-	returnPools() {
-		if (this.getRentalProviders().length === 0) {
-			this._setPools([])
-			return this.pools
-		}
-		let pools = []
-		let poolIDs = []
-		for (let provider of this.getRentalProviders()) {
-			let tmpPools = provider.returnPools()
-			for (let pool of tmpPools) {
-				if (!poolIDs.includes(pool.id)) {
-					poolIDs.push(pool.id)
-					pools.push(pool)
-				}
-			}
-		}
-		this._setPools(pools)
-		return pools
-	}
+	returnPools(providerType) {
+        if (this.getRentalProviders().length === 0) {
+            this._setPools([]);
+            return this.pools;
+        }
+
+        let pools = [];
+        let poolIDs = [];
+        for (let provider of this.getRentalProviders()) {
+            if (providerType === provider.name) {
+                let tmpPools = provider.returnPools();
+                for (let pool of tmpPools) {
+                    if (!poolIDs.includes(pool.id)) {
+                        poolIDs.push(pool.id);
+                        pools.push(pool);
+                    }
+                }
+            }
+        }
+
+        this._setPools(pools);
+        return pools;
+    }
 
 	/**
 	 * Create a pool profile
