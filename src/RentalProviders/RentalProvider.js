@@ -320,6 +320,8 @@ class RentalProvider {
 	 * @param {Object} options - see return value from AutoRenter -> manualRentPreprocess
 	 * @returns {Promise<Object>}
 	 */
+	
+	// Hit from AutoRenter.js rent() 
 	async rent(options) {
 		let rental
 		if (options.market === MiningRigRentals) {

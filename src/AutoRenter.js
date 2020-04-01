@@ -224,9 +224,8 @@ class AutoRenter {
 		}
 
 		for (let prov of nhProviders) {
-			badges.push(await prov.preprocessRent(options.hashrate, options.duration))
+			badges.push(await prov.preprocessRent(options.hashrate, options.duration)) // Hits NiceHashProvider.js preprocessRent()
 		}
-		// console.log("badge results: ", badges)
 
 		let usable_badges = []
 		let error_badges = []
@@ -375,6 +374,8 @@ class AutoRenter {
 	 * @param {Function} [options.rentSelector] - This function runs to let the user decide which rent option to go for. If no func is passed, will attempt to pick best possible rent opt.
 	 * @return {Promise<Object>} Returns a Promise that will resolve to an Object containing info about the rental made
 	 */
+
+	// Gets hit from SpartanBot.js rent()
 	async rent(options) {
 		if (!this.rental_providers || this.rental_providers.length === 0) {
 			return {
@@ -424,7 +425,7 @@ class AutoRenter {
 		if (!Array.isArray(badges))
 			badges = [badges]
 		for (let badge of badges) {
-			let rentalReturn = await badge.provider.rent(badge)
+			let rentalReturn = await badge.provider.rent(badge)  //RentalProvider.js rent() 
 			for (let rental of rentalReturn) {
 				rentals.push(rental)
 			}

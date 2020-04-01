@@ -208,12 +208,14 @@ class NiceHashProvider extends RentalProvider {
 	_returnActivePool() {
 		return this.activePool
 	}
-
+	
+	// Gets hit from async rentPreprocess(options) in AutoRenter.js 
 	async preprocessRent(hashrate, duration) {
 		let status = {status: NORMAL}
 		let balance;
 		try {
-			balance = Number(await this.getBalance())
+			let balance_Object = await this._getBalance()
+      		balance = Number(balance_Object.balance);
 		} catch (err) {
 			status.status = ERROR
 			return {success: false, message: 'failed to get balance', status}
@@ -334,6 +336,8 @@ class NiceHashProvider extends RentalProvider {
 	 * @async
 	 * @returns {Promise<Object>}
 	 */
+
+	//Gets hit from RentalProvider.js rent()
 	async _rent(options) {
 		if (!this.api_key || !this.api_id)
 			throw new Error('Must provide api key and api id on initialize')

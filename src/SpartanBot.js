@@ -124,7 +124,10 @@ class SpartanBot {
 			throw new Error("No Strategy match found for `settings.type`!")
 
 		let strat = new rental_strategy(settings)
-		strat.onRentalTrigger(this.rent.bind(this))
+		
+		// spartan.rent() = this.rent.bind(this)
+        this.rental_strategies[strat.getInternalType()] = strat;
+		strat.onRentalTrigger(this.rent.bind(this)) // Runs onRentalTrigger in GenericStrategy.js
 
 		this.rental_strategies[strat.getInternalType()] = strat
 
@@ -153,7 +156,7 @@ class SpartanBot {
 			this.setupRentalStrategy({type: ManualRent})
 
 		let strat = this.getRentalStrategies(ManualRent)
-		strat.manualRent(hashrate, duration, rentSelector)
+		strat.manualRent(hashrate, duration, rentSelector) // Hits manualRent in ManualRentStrategy.js 
 	}
 
 	/**
@@ -178,6 +181,8 @@ class SpartanBot {
  	 * @private
 	 * @return {Promise<Object>} Returns a Promise that will resolve to an Object that contains information about the rental request
 	 */
+
+	 // Hit from ManualRentStrategy.js out of the this.emitter.emit(_constants.TriggerRental, hashrate, duration, rentSelector);
 	rent(hashrate, duration, rentSelector){
 		this.autorenter = new AutoRenter({
 			rental_providers: this.rental_providers

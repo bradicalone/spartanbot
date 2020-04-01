@@ -10,7 +10,7 @@ class GenericStrategy {
 		this.emitter = new EventEmitter()
 
 	}
-
+	// Get hit from SpartanBot.js => strat.onRentalTrigger(this.rent.bind(this));
 	onRentalTrigger(rentalFunction){
 		this.emitter.on(TriggerRental, rentalFunction)
 	}
