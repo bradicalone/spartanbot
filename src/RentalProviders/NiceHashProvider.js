@@ -164,8 +164,8 @@ class NiceHashProvider extends RentalProvider {
 			let pool = await this.api.getPools();
 			return pool
 		} catch (e) {
-			console.log('e:', e)
-			return e
+			console.log('e:', e.error)
+			return e.error
 		}
 	}
 

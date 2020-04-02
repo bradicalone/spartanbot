@@ -316,9 +316,18 @@ class SpartanBot {
 			process.env.NICEHASH_API_KEY = settings.api_key || settings.key
 			process.env.NICEHASH_API_ID = settings.api_id || settings.id
 			try {
-                pools = await new_provider.getPools()
+                let res = await new_provider.getPools()
+                if ( res.errors ) {
+                    return pools = {
+                        success: false,
+                        message: 'pools not found. If error, check NiceHash credentials or api url',
+                        error: res.errors
+					};
+				} else {
+                    pools = res
+                }
             } catch( e ) {
-                pools = [{
+                return pools = [{
                     success: false,
                     message: 'pools not found',
                     e
