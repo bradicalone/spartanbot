@@ -544,6 +544,24 @@ class MRRProvider extends RentalProvider {
 		}
 	}
 
+   /**
+   * List/search transaction history
+   * @param {Object} [options]
+   * @param {number} [options.start=0] - Start number (for pagination)
+   * @param {number} [options.limit=100] - Limit number (for pagination)
+   * @param {string} [options.algo] - Algo to filter -- see /info/algos
+   * @param {string} [options.type] - Type to filter -- one of [credit,payout,referral,deposit,payment,credit/refund,debit/refund,rental fee]
+   * @param {number} [options.rig] - Filter to specific rig by ID
+   * @param {number} [options.rental] - Filter to specific rental by ID
+   * @param {string} [options.txid] - Filter to specific txid
+   * @async
+   * @returns {Promise<Object>}
+   */
+
+	async getTransactions(options){
+		return await this.api.getTransactions(options)
+	}
+
 	/**
 	 * Get the confirmed account balance for a specific coin (defaults to BTC)
 	 * @param {string} [coin='BTC'] - The coin you wish to get a balance for [BTC, LTC, ETH, DASH]
@@ -635,9 +653,9 @@ class MRRProvider extends RentalProvider {
 				let rentalObject = {}
 				rentalObject.market = "MiningRigRentals"
 				rentalObject.success = true
-				rentalObject.amount = parseFloat(rentalConfirmation[rig].data.price.paid)
-				rentalObject.limit = (rentalConfirmation[rig].data.hashrate.advertised.hash)/1000/1000
-				rentalObject.duration = rentalConfirmation[rig].data.length
+				rentalObject.paid = parseFloat(rentalConfirmation[rig].data.price.paid);
+				rentalObject.limit = rentalConfirmation[rig].data.hashrate.advertised.hash;
+				rentalObject.limitAdvertised = rentalConfirmation[rig].data.price_converted.advertised;
 				rentalObject.id = rig
 				rentalObject.status = {status: NORMAL}
 				rentalObject.uid = this.getUID()
@@ -650,7 +668,17 @@ class MRRProvider extends RentalProvider {
 
 		return rented_rigs
 	}
+	 /**
+   * Get statistics for an algo (suggested price, unit information, current rented hash/etc)
+   * @param {string} algo - the name of the algorithm you wish to search by. Ex: 'scrypt'
+   * @param {string} [currency='BTC'] - Currency to use for price info. Options: BTC, ETH, LTC, DASH
+   * @async
+   * @returns {Promise<Object>}
+   */
 
+	async getAlgo(algo, currency) {
+		return await this.api.getAlgo(algo, currency)
+	}
 	/**
 	 * Get the rigs needed to fulfill rental requirements
 	 * @param {number | string} hashrate - in megahertz(mh)

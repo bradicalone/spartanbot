@@ -208,9 +208,16 @@ class NiceHashProvider extends RentalProvider {
 	_returnActivePool() {
 		return this.activePool
 	}
-	
+	/**
+	 * returns stats current (orders) for EU & USA market
+	 * @private
+	 */
+	async getOrderBook() {
+		return await this.api.getOrderBook()
+	}
 	// Gets hit from async rentPreprocess(options) in AutoRenter.js 
 	async preprocessRent(hashrate, duration) {
+
 		let status = {status: NORMAL}
 		let balance;
 		try {
@@ -375,7 +382,7 @@ class NiceHashProvider extends RentalProvider {
 
 		let res;
 		try {
-			res = await this.api.createOrder(rentOptions)
+			// res = await this.api.createOrder(rentOptions)
 		} catch (err) {
 			return {success: false, message: `Failed to create NiceHash order`, error: err, status: ERROR}
 		}

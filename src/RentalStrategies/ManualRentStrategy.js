@@ -14,13 +14,13 @@ class ManualRentStrategy extends GenericStrategy {
 	}
 
 	startup(){
-		this.emitter.on(ManualRent, (hashrate, duration, rentSelector) => {
-			this.emitter.emit(TriggerRental, hashrate, duration, rentSelector)
+		this.emitter.on(ManualRent, (options, rentSelector) => { // 2nd
+			this.emitter.emit(TriggerRental, options, rentSelector) // => GenerticStrategy.js 3rd, => SpartanBot.js rent()
 		})
 	}
 
-	manualRent(hashrate, duration, rentSelector) {
-		this.emitter.emit(ManualRent, hashrate, duration, rentSelector)
+	manualRent(options, rentSelector) {
+		this.emitter.emit(ManualRent, options, rentSelector) // => Hits emitter.on in startup() above  1st 
 	}
 
 }

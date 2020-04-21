@@ -151,12 +151,12 @@ class SpartanBot {
 	 * @param  {Number} duration - The number of seconds that you wish to rent the miners for
 	 * @param  {Function} [rentSelector] - Pass in a function that returns a Promise to offer rent options to user
 	 */
-	manualRent(hashrate, duration, rentSelector) {
+	manualRent(options, rentSelector) {
 		if (!this.getRentalStrategies(ManualRent))
 			this.setupRentalStrategy({type: ManualRent})
 
 		let strat = this.getRentalStrategies(ManualRent)
-		strat.manualRent(hashrate, duration, rentSelector) // Hits manualRent in ManualRentStrategy.js 
+		strat.manualRent(options, rentSelector) // Hits manualRent in ManualRentStrategy.js 
 	}
 
 	/**
@@ -183,13 +183,12 @@ class SpartanBot {
 	 */
 
 	 // Hit from ManualRentStrategy.js out of the this.emitter.emit(_constants.TriggerRental, hashrate, duration, rentSelector);
-	rent(hashrate, duration, rentSelector){
+	rent(options, rentSelector){
 		this.autorenter = new AutoRenter({
 			rental_providers: this.rental_providers
 		})
 		this.autorenter.rent({
-			hashrate,
-			duration,
+			options,
 			rentSelector
 		}).then(rental_info => {
 			this.emitter.emit(RentalFunctionFinish, rental_info)
