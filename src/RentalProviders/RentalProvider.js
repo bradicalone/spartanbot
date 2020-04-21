@@ -145,7 +145,7 @@ class RentalProvider {
 	 * @param {string|number} id - ID of the pool you want to fetch
 	 */
 	async getPool(id) {
-		if (typeof id !== 'number' || typeof id !== 'string') {
+		if (!(typeof id === 'number' || typeof id === 'string')) {
 			throw new Error('Cannot get pool: id must be of type number or string')
 		}
 		try {
@@ -320,8 +320,8 @@ class RentalProvider {
 	 * @param {Object} options - see return value from AutoRenter -> manualRentPreprocess
 	 * @returns {Promise<Object>}
 	 */
-	
-	// Hit from AutoRenter.js rent() 
+
+	// Hit from AutoRenter.js rent()
 	async rent(options) {
 		let rental
 		if (options.market === MiningRigRentals) {

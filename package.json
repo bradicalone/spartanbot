@@ -22,34 +22,34 @@
     "url": "https://github.com/oipwg/spartanbot/issues"
   },
   "devDependencies": {
-    "@babel/cli": "^7.0.0",
-    "@babel/core": "^7.0.1",
-    "@babel/preset-env": "^7.0.0",
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.9.0",
+    "@babel/preset-env": "^7.9.5",
     "babel-core": "^7.0.0-bridge.0",
-    "babel-jest": "^23.6.0",
-    "jest": "^23.6.0",
-    "jsdoc": "^3.6.3",
+    "babel-jest": "^25.4.0",
+    "jest": "^25.4.0",
+    "jsdoc": "^3.6.4",
     "jsdoc-template": "git+https://github.com/oipwg/jsdoc-template.git",
-    "rimraf": "^2.6.2"
+    "rimraf": "^3.0.2"
   },
   "jest": {
     "testEnvironment": "node"
   },
   "homepage": "https://github.com/oipwg/spartanbot#readme",
   "dependencies": {
-    "bn.js": "^4.11.8",
-    "dotenv": "^6.0.0",
+    "bn.js": "^5.1.1",
+    "dotenv": "^8.2.0",
     "lodash": "^4.17.15",
     "lodash.combinations": "^18.9.19",
     "market-rental-stats": "^4.0.0",
-    "miningrigrentals-api-v2": "^1.1.1",
-    "moment": "^2.22.2",
+    "miningrigrentals-api-v2": "^1.1.2",
+    "moment": "^2.24.0",
     "nicehash-api": "git+https://github.com/bradicalone/nicehash-api.git",
-    "node-localstorage": "^1.3.1",
+    "node-localstorage": "^2.1.6",
     "oip-account": "^1.4.1",
-    "oip-exchange-rate": "^1.0.7",
-    "spartansense": "git+https://github.com/oipwg/SpartanSense.git",
-    "uid": "0.0.2"
+    "@oipwg/exchange-rate": "^2.0.0-beta.1",
+    "spartansense": "git+https://github.com/oipwg/SpartanSense.git#up",
+    "uid": "1.0.0"
   },
   "files": [
     "lib"

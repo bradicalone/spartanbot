@@ -129,7 +129,7 @@ describe("MRRProvider", () => {
 	it('add active rentals to local variable', async () => {
 		let mrr = new MRRProvider(apikey);
 		let rigs = await mrr.fetchAndSetActiveRigs()
-		expect(mrr.getActiveRigs() === rigs)
+		expect(await mrr.getActiveRigs() === rigs)
 	})
 })
 

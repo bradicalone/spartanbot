@@ -124,7 +124,7 @@ class SpartanBot {
 			throw new Error("No Strategy match found for `settings.type`!")
 
 		let strat = new rental_strategy(settings)
-		
+
 		// spartan.rent() = this.rent.bind(this)
         this.rental_strategies[strat.getInternalType()] = strat;
 		strat.onRentalTrigger(this.rent.bind(this)) // Runs onRentalTrigger in GenericStrategy.js
@@ -156,7 +156,7 @@ class SpartanBot {
 			this.setupRentalStrategy({type: ManualRent})
 
 		let strat = this.getRentalStrategies(ManualRent)
-		strat.manualRent(options, rentSelector) // Hits manualRent in ManualRentStrategy.js 
+		strat.manualRent(options, rentSelector) // Hits manualRent in ManualRentStrategy.js
 	}
 
 	/**
@@ -510,7 +510,7 @@ class SpartanBot {
 	 * @return {Object} pool
 	 */
 	async getPool(id) {
-		if (typeof id !== 'number' || typeof id !== 'string') {
+		if (!(typeof id === 'number' || typeof id === 'string')) {
 			throw new Error('Cannot get pool: id must be of type number or string')
 		}
 		let pools = []
