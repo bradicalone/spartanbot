@@ -526,9 +526,11 @@ class AutoRenter {
 
        setTimeout(async()=> {
             let transactions = {start: 0, limit: 100}
-            console.log('TIMER RAN AUTORENTER.JS 666')
-            let res = await provider.getTransactions(transactions)
-            console.log('Response DURINGS: from autorenter.js 668',res.data.transactions)
+            console.log('TIMER RAN AUTORENTER.JS 529')
+            for (let badge of badges) {
+                let res = await provider.getTransactions(transactions)
+                console.log('getTransactions DURING Renting: from autorenter.js 532',res.data.transactions)
+            }
         }, 10000)
 
         return returnData
