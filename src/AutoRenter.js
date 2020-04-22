@@ -2,6 +2,13 @@ import Exchange from '@oipwg/exchange-rate';
 import uid from 'uid'
 const events = require('events');
 const emitter = new events()
+
+
+const NiceHash = "NiceHash"
+const MiningRigRentals = "MiningRigRentals"
+
+import {toNiceHashPrice} from "./util";
+import {ERROR, NORMAL, WARNING, LOW_BALANCE, LOW_HASHRATE, CUTOFF, RECEIPT} from "./constants";
 const wss = require(process.cwd()+'/backend/routes/socket').wss;
 
 wss.on('connection', (ws) => {
@@ -9,12 +16,6 @@ wss.on('connection', (ws) => {
         ws.send(msg)
     })
 });
-
-const NiceHash = "NiceHash"
-const MiningRigRentals = "MiningRigRentals"
-
-import {toNiceHashPrice} from "./util";
-import {ERROR, NORMAL, WARNING, LOW_BALANCE, LOW_HASHRATE, CUTOFF, RECEIPT} from "./constants";
 
 /**
  * Manages Rentals of Miners from multiple API's
@@ -180,14 +181,9 @@ class AutoRenter {
 			providerBadges.push({
 				market,
 				status,
-				// amount,
 				last10AvgCostMrrScrypt,
-				// totalHashesTH: limit * 60 * 60 * duration,
-				// hashesDesiredTH: options.hashrate / 1000 / 1000 * 60 * 60 * options.duration,
 				duration,
-				// limit,
 				selectedRigsTHs,
-				// price,
 				selectedRigsRentalCost,
 				balance,
 				query: {
@@ -207,7 +203,7 @@ class AutoRenter {
 		}
 	}
 
-	    /**
+	/**
      * Compare MiningRigRentals and NiceHash market to find which market to rent with
      * @param {Object} options - The Options for the rental operation
      * @param {Number} options.hashrate - The amount of Hashrate you wish to rent
@@ -416,7 +412,7 @@ class AutoRenter {
 
         if (!this.rental_providers || this.rental_providers.length === 0) {
             return {
-                status: _constants.ERROR,
+                status: ERROR,
                 success: false,
                 type: "NO_RENTAL_PROVIDERS",
                 message: "Rent Cancelled, no RentalProviders found to rent from"
@@ -429,17 +425,16 @@ class AutoRenter {
             preprocess = await this.rentPreprocess(inputOptions); // => rentPreprocess() from above
         } catch (err) {
             return {
-                status: _constants.ERROR,
+                status: ERROR,
                 success: false,
                 message: "Failed to get prepurchase_info",
                 error: err
             };
         }
-        console.log('PREPROCESS AutoRenter.js line 553', preprocess)
-        console.log('_constants.ERROR', _constants.ERROR)
-        if (preprocess.status === _constants.ERROR) {
+
+        if (preprocess.status === ERROR) {
             return {
-                status: _constants.ERROR,
+                status: ERROR,
                 success: false,
                 message: 'Error in rent preprocess',
                 preprocess
@@ -448,7 +443,7 @@ class AutoRenter {
 
         if (preprocess.badges === []) {
             return {
-                status: _constants.ERROR,
+                status: ERROR,
                 success: false,
                 message: 'Preprocess found no available renting options',
                 preprocess
@@ -462,7 +457,6 @@ class AutoRenter {
 
         //rent
         let rentals = [];
-        if (!Array.isArray(badges))
 
         for (let badge of badges) {
 
@@ -475,7 +469,7 @@ class AutoRenter {
             }
         }
 
-        let status = _constants.NORMAL;
+        let status = NORMAL;
         let message = 'Rent Successful';
         let successfulRentals = 0;
         let unsuccessfulRentals = 0;
@@ -487,12 +481,12 @@ class AutoRenter {
         }
 
         if (unsuccessfulRentals > 0 && successfulRentals > 0) {
-            status = _constants.WARNING;
+            status = WARNING;
             message = 'Not all rentals were successful';
         }
 
         if (unsuccessfulRentals >= 0 && successfulRentals === 0) {
-            status = _constants.ERROR;
+            status = ERROR;
             message = 'Failed to rent';
         }
 
@@ -526,7 +520,7 @@ class AutoRenter {
             status,
             message,
             rentals,
-            type: _constants.RECEIPT
+            type: RECEIPT
         };
        console.log( 'AUTORENTER.JS line 665 returnData:' , returnData )
 
