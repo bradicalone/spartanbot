@@ -1,4 +1,4 @@
-import Exchange from 'oip-exchange-rate';
+import Exchange from '@oipwg/exchange-rate';
 import uid from 'uid'
 const events = require('events');
 const emitter = new events()
@@ -216,7 +216,7 @@ class AutoRenter {
      */
 	async compareMarkets(options) {
         console.log('OPTIONS AUTORENT.JS #269', options)
-        const niceHashDuration = 24  
+        const niceHashDuration = 24
         const minNiceHashAmount = 0.005
         const token = options.token
         let MRR = {}
@@ -229,7 +229,7 @@ class AutoRenter {
         /**
          * Get NiceHash configured amount
          * @param {Number} hashrateNH - hashrate from either options.hashrate or new hashrate coming from getNewHashrate()
-         * @return {<String>} Returns a Promise that will resolve to a string for which market to rent with
+         * @return {Object}
          */
 
         let getNiceHashAmount = (hashrateNH) => {
@@ -238,13 +238,13 @@ class AutoRenter {
             let amount = ((niceHashDuration * hashrate * niceHash.marketPriceNhScryptBtcThSD) / 24).toFixed(11)
             return {amount, hashrate}
         }
-       
+
         try {
 
             for (let provider of this.rental_providers) {
                 console.log('provider.getInternalType()', provider.getInternalType())
                 if (provider.getInternalType() === MiningRigRentals) {
-                   
+
                     // Switch hashrate to MH/s due to MRR accepts it that way
                     // let hashrate = options.hashrate * 1000000
                     let response = await provider.getAlgo('scrypt', 'BTC')
@@ -265,7 +265,7 @@ class AutoRenter {
                             }
                         }
                     }
-                    
+
                     niceHash.success = true
                     niceHash.marketPriceNhScryptBtcThSD = lowestPrice
                     console.log('marketPriceNhScryptBtcThSD: autoRenter.js line 294', niceHash)
@@ -285,7 +285,7 @@ class AutoRenter {
                 options.duration = 24
                 // Checks if the new renting hashrate price is lower than the min amount NiceHash accepts of 0.005
                 if ( lowestPriceGHs < minNiceHashAmount ) {
-                        
+
                     console.log('options:  Autorenter.js 316', options)
                     const MinPercentFromMinAmount = ( 24 * .005 ) / ( (24 * .005 ) + ( ( ( options.difficulty * Math.pow(2,32) ) / 40 ) / 1000000000000 * niceHash.marketPriceNhScryptBtcThSD * 24 ) )
                     console.log('MinPercentFromMinAmount:', MinPercentFromMinAmount)
@@ -312,19 +312,19 @@ class AutoRenter {
                 let niceHashPriceGHs = niceHash.marketPriceNhScryptBtcThSD / 1000
                 console.log('marketPriceNhScryptBtcThSD:', niceHashPriceGHs, 'MRR.marketPriceMrrScryptBtcThSD',  MRR.marketPriceMrrScryptBtcThSD)
 
-                
+
                 if (MRR.marketPriceMrrScryptBtcThSD < niceHashPriceGHs) {
-        
+
                     let msg = JSON.stringify({info: `from MiningRigRentals`})
                     emitter.emit('message', msg)
-                     
+
                     return 'MiningRigRentals'
                 } else {
                     return niceHashCalculation()
                 }
             }
             // If user only chooses one market to begin with return that market
-            const market = MRR.success ? 'MiningRigRentals' : niceHashCalculation()
+            const market = MRR.success ? 'MiningRigRentals' : await niceHashCalculation()
             emitter.emit('message', JSON.stringify({market: market}))
 
             return market
@@ -396,7 +396,7 @@ class AutoRenter {
      * @param {Object} preprocess - the returned object from manualRentPreprocess()
      * @param {Object} options - options passed down into manualRent func (hashrate, duration)
      * @returns {Promise<{Object}>}
-     * WAS rentSelector() {} - REMOVED 
+     * WAS rentSelector() {} - REMOVED
      */
 
 
@@ -426,7 +426,7 @@ class AutoRenter {
         let preprocess;
 
         try {
-            preprocess = await this.rentPreprocess(inputOptions); // => rentPreprocess() from above 
+            preprocess = await this.rentPreprocess(inputOptions); // => rentPreprocess() from above
         } catch (err) {
             return {
                 status: _constants.ERROR,
@@ -468,7 +468,7 @@ class AutoRenter {
 
             console.log('BADGE PROVIDER AutoRenter.js line 606 ENDS HERE! CHANGE RETURN', badge)
 
-            let rentalReturn = await badge.provider.rent(badge); //RentalProvider.js rent() 
+            let rentalReturn = await badge.provider.rent(badge); //RentalProvider.js rent()
 
             for (let rental of rentalReturn) {
                 rentals.push(rental);
@@ -521,7 +521,7 @@ class AutoRenter {
             }
         }
 
-        
+
         let returnData = {
             status,
             message,
@@ -529,7 +529,7 @@ class AutoRenter {
             type: _constants.RECEIPT
         };
        console.log( 'AUTORENTER.JS line 665 returnData:' , returnData )
-       
+
        setTimeout(async()=> {
             let transactions = {start: 0, limit: 100}
             console.log('TIMER RAN AUTORENTER.JS 666')
