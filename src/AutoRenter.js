@@ -7,12 +7,12 @@ const emitter = new events()
 const NiceHash = "NiceHash"
 const MiningRigRentals = "MiningRigRentals"
 
-import {toNiceHashPrice} from "./util";
-import {ERROR, NORMAL, WARNING, LOW_BALANCE, LOW_HASHRATE, CUTOFF, RECEIPT} from "./constants";
-const wss = require(process.cwd()+'/backend/routes/socket').wss;
+import { toNiceHashPrice } from "./util";
+import { ERROR, NORMAL, WARNING, LOW_BALANCE, LOW_HASHRATE, CUTOFF, RECEIPT } from "./constants";
+const wss = require(process.cwd() + '/backend/routes/socket').wss;
 
 wss.on('connection', (ws) => {
-    emitter.on('message', (msg)=> {
+    emitter.on('message', (msg) => {
         ws.send(msg)
     })
 });
@@ -27,11 +27,36 @@ class AutoRenter {
 	 * @param  {Array.<RentalProvider>} settings.rental_providers - The Rental Providers that you wish to use to rent miners.
 	 * @return {Boolean}
 	 */
-	constructor(settings) {
-		this.settings = settings
-		this.rental_providers = settings.rental_providers
-		this.exchange = new Exchange();
-	}
+    constructor(settings) {
+        this.settings = settings
+        this.rental_providers = settings.rental_providers
+        this.exchange = new Exchange();
+    }
+    async updatePoolAddress(options) {
+        let id;
+        let walletAddress = options.address
+        let pools = options.SpartanBot.returnPools('MiningRigRentals')
+        let _priority = pools[0].priority
+
+        for (let pool of pools) {
+            let priority = pool.priority
+
+            if (priority > _priority) {
+                _priority = priority
+                id = pool.id
+            }
+        }
+        // If all pools have the same priority or if there is only one pool it returns that id
+        if (typeof id === 'undefined') id = pools[0].id
+        try {
+            let updatedPool = await options.SpartanBot.updatePool(id, {
+                user: walletAddress
+            })
+            return updatedPool
+        } catch (e) {
+            return { success: false, error: e }
+        }
+    }
 
 	/**
 	 * Preprocess Rent for MiningRigRental Providers
@@ -40,168 +65,189 @@ class AutoRenter {
 	 * @param {Number} options.duration - The duration (in seconds) that you wish to rent hashrate for
 	 * @returns {Promise<Object|Array.<Object>>}
 	 */
-	async mrrRentPreprocess(options) {
-		// Switch hashrate to MH/s due to MRR accepts it that way
-		let hashrate = options.hashrate * 1000000
+    async mrrRentPreprocess(options) {
+        // Switch hashrate to MH/s due to MRR accepts it that way
+        let hashrate = options.hashrate * 1000000; //ToDo: make sure providers profileIDs aren't the same
+        //get available rigs based on hashpower and duration
 
-		//ToDo: make sure providers profileIDs aren't the same
-		//get available rigs based on hashpower and duration
-		let _provider;
-		let mrr_providers = []
-		for (let provider of this.rental_providers) {
-			if (provider.getInternalType() === "MiningRigRentals") {
-				_provider = provider
-				mrr_providers.push(provider)
-			}
-		}
-		if (!_provider)
-			return {status: ERROR, success: false, message: 'No MRR Providers'}
+        let _provider;
 
-		let rigs_to_rent = [];
-		try {
-			rigs_to_rent = await _provider.getRigsToRent(hashrate, options.duration)
-		} catch (err) {
-			return {status: ERROR, market: MiningRigRentals, message: 'failed to fetch rigs from API', err}
-		}
+        let mrr_providers = [];
 
-		//divvy up providers and create Provider object
-		let providers = [], totalBalance = 0;
-		for (let provider of mrr_providers) {
-			//get the balance of each provider
-			let balance
-			try {
-				balance = await provider.getBalance()
-			} catch (err) {
-				throw new Error(`Failed to get MRR balance: ${err}`)
-			}
-			if (isNaN(balance) && !balance.success) {
-				return {status: ERROR, success: false, message: "Failed to get balance from API", error: balance}
-			}
+        for (let provider of this.rental_providers) {
+            if (provider.getInternalType() === "MiningRigRentals") {
+                _provider = provider;
+                mrr_providers.push(provider);
+            }
+        }
 
-			totalBalance += balance
-			//get the profile id needed to rent for each provider
-			let profile = provider.returnActivePoolProfile() || await provider.getProfileID();
-			providers.push({
-				balance,
-				profile,
-				rigs_to_rent: [],
-				uid: provider.getUID(),
-				provider
-			})
-		}
+        if (!_provider) return {
+            status: 'ERROR',
+            success: false,
+            message: 'No MRR Providers'
+        };
+        let addressSuccess;
 
-		let hashrate_found = _provider.getTotalHashPower(rigs_to_rent)
-		let cost_found = _provider.getRentalCost(rigs_to_rent)
+        let addressUpdate = await this.updatePoolAddress(options)
 
-		let hashratePerc = options.hashrate * .10
-		let hashrateMin = options.hashrate - hashratePerc
+        for (let update of addressUpdate) {
+            addressSuccess = update.message.success
+        }
 
-		// console.log("total hashpower: ", hashpower_found)
-		// console.log("total cost: ", cost_found)
+        if (!addressSuccess) {
+            return {
+                status: 'ERROR',
+                success: false,
+                message: "Failed to get update new wallet address",
+                error: addressUpdate.error
+            };
+        }
 
-		// ToDo: Consider not splitting the work up evenly and fill each to his balance first come first serve
-		//load up work equally between providers. 1 and 1 and 1 and 1, etc
-		let iterator = 0; //iterator is the index of the provider while, 'i' is the index of the rigs
-		let len = providers.length
-		for (let i = 0; i < rigs_to_rent.length; i++) {
-			if (i === len || iterator === len) {
-				iterator = 0
-			}
-			providers[iterator].rigs_to_rent.push(rigs_to_rent[i])
-			iterator += 1
-		}
+        let rigs_to_rent = [];
+        try {
+            rigs_to_rent = await _provider.getRigsToRent(hashrate, options.duration)
+        } catch (err) {
+            return { status: ERROR, market: MiningRigRentals, message: 'failed to fetch rigs from API', err }
+        }
 
-		//remove from each provider rigs (s)he cannot afford
-		let extra_rigs = []
-		for (let p of providers) {
-			let rental_cost = _provider.getRentalCost(p.rigs_to_rent);
+        //divvy up providers and create Provider object
+        let providers = [], totalBalance = 0;
+        for (let provider of mrr_providers) {
+            //get the balance of each provider
+            let balance
+            try {
+                balance = await provider.getBalance()
+            } catch (err) {
+                throw new Error(`Failed to get MRR balance: ${err}`)
+            }
+            if (isNaN(balance) && !balance.success) {
+                return { status: ERROR, success: false, message: "Failed to get balance from API", error: balance }
+            }
 
-			if (p.balance < rental_cost) {
-				while (p.balance < rental_cost && p.rigs_to_rent.length > 0) {
-					// console.log(`balance: ${p.balance}\nRental cost: ${rental_cost}\nOver Under: ${p.balance-rental_cost}\nAmount substracted -${p.rigs_to_rent[0].btc_price}\nLeft Over: ${rental_cost-p.rigs_to_rent[0].btc_price}`)
-					let tmpRig;
-					[tmpRig] = p.rigs_to_rent.splice(0, 1)
-					extra_rigs.push(tmpRig)
+            totalBalance += balance
+            //get the profile id needed to rent for each provider
+            let profile = provider.returnActivePoolProfile() || await provider.getProfileID();
+            providers.push({
+                balance,
+                profile,
+                rigs_to_rent: [],
+                uid: provider.getUID(),
+                provider
+            })
+        }
 
-					rental_cost = _provider.getRentalCost(p.rigs_to_rent)
-				}
-			}
-		}
+        let hashrate_found = _provider.getTotalHashPower(rigs_to_rent)
+        let cost_found = _provider.getRentalCost(rigs_to_rent)
 
-		//add up any additional rigs that a provider may have room for
-		for (let p of providers) {
-			let rental_cost = _provider.getRentalCost(p.rigs_to_rent);
-			if (p.balance > rental_cost) {
-				for (let i = extra_rigs.length - 1; i >= 0; i--) {
-					if ((extra_rigs[i].btc_price + rental_cost) <= p.balance) {
-						let tmpRig;
-						[tmpRig] = extra_rigs.splice(i, 1);
-						p.rigs_to_rent.push(tmpRig)
-						rental_cost = _provider.getRentalCost(p.rigs_to_rent);
-					}
-				}
-			}
-		}
+        let hashratePerc = options.hashrate * .10
+        let hashrateMin = options.hashrate - hashratePerc
 
-		let providerBadges = []
-		for (let p of providers) {
-			let status = {status: NORMAL}
+        // console.log("total hashpower: ", hashpower_found)
+        // console.log("total cost: ", cost_found)
 
-			p.provider.setActivePoolProfile(p.profile)
-			for (let rig of p.rigs_to_rent) {
-				rig.rental_info.profile = p.profile
-			}
+        // ToDo: Consider not splitting the work up evenly and fill each to his balance first come first serve
+        //load up work equally between providers. 1 and 1 and 1 and 1, etc
+        let iterator = 0; //iterator is the index of the provider while, 'i' is the index of the rigs
+        let len = providers.length
+        for (let i = 0; i < rigs_to_rent.length; i++) {
+            if (i === len || iterator === len) {
+                iterator = 0
+            }
+            providers[iterator].rigs_to_rent.push(rigs_to_rent[i])
+            iterator += 1
+        }
 
-			let price = 0,
-			//   limit = 0,
-			selectedRigsTHs = 0,
-			last10AvgCostMrrScrypt = 0,
-			selectedRigsRentalCost = 0,
-			duration = options.duration;
-			last10AvgCostMrrScrypt += p.provider.getRentalCost(p.rigs_to_rent); // amount
-			// limit += (p.provider.getTotalHashPower(p.rigs_to_rent) / 1000 / 1000)
-        	selectedRigsTHs += p.provider.getTotalHashPower(p.rigs_to_rent) / 1000 / 1000; // limit
-			price = toNiceHashPrice(last10AvgCostMrrScrypt, selectedRigsTHs, duration)
-			selectedRigsRentalCost += selectedRigsTHs * 1000 * last10AvgCostMrrScrypt / (24 * duration)
-			let market = MiningRigRentals
-			let balance = p.balance
+        //remove from each provider rigs (s)he cannot afford
+        let extra_rigs = []
+        for (let p of providers) {
+            let rental_cost = _provider.getRentalCost(p.rigs_to_rent);
 
-			if (cost_found > balance) {
-				status.status = WARNING
-				status.type = LOW_BALANCE
-				if (hashrate_found < hashrateMin) {
-					status.warning = LOW_HASHRATE
-					status.message = `Can only find ${((hashrate_found / options.hashrate) * 100).toFixed(2)}% of the hashrate desired`
-				}
-			} else if (p.rigs_to_rent.length === 0) {
-				status.status = ERROR
-				status.type = "NO_RIGS_FOUND"
-			}
+            if (p.balance < rental_cost) {
+                while (p.balance < rental_cost && p.rigs_to_rent.length > 0) {
+                    // console.log(`balance: ${p.balance}\nRental cost: ${rental_cost}\nOver Under: ${p.balance-rental_cost}\nAmount substracted -${p.rigs_to_rent[0].btc_price}\nLeft Over: ${rental_cost-p.rigs_to_rent[0].btc_price}`)
+                    let tmpRig;
+                    [tmpRig] = p.rigs_to_rent.splice(0, 1)
+                    extra_rigs.push(tmpRig)
 
-			providerBadges.push({
-				market,
-				status,
-				last10AvgCostMrrScrypt,
-				duration,
-				selectedRigsTHs,
-				selectedRigsRentalCost,
-				balance,
-				query: {
-				hashrate_found,
-				cost_found,
-				duration: options.duration
-				},
-				uid: p.uid,
-				rigs: p.rigs_to_rent,
-				provider: p.provider
-			})
-		}
-		if (providerBadges.length === 1) {
-			return {success: true, badges: providerBadges[0]}
-		} else {
-			return {success: true, badges: providerBadges}
-		}
-	}
+                    rental_cost = _provider.getRentalCost(p.rigs_to_rent)
+                }
+            }
+        }
+
+        //add up any additional rigs that a provider may have room for
+        for (let p of providers) {
+            let rental_cost = _provider.getRentalCost(p.rigs_to_rent);
+            if (p.balance > rental_cost) {
+                for (let i = extra_rigs.length - 1; i >= 0; i--) {
+                    if ((extra_rigs[i].btc_price + rental_cost) <= p.balance) {
+                        let tmpRig;
+                        [tmpRig] = extra_rigs.splice(i, 1);
+                        p.rigs_to_rent.push(tmpRig)
+                        rental_cost = _provider.getRentalCost(p.rigs_to_rent);
+                    }
+                }
+            }
+        }
+
+        let providerBadges = []
+        for (let p of providers) {
+            let status = { status: NORMAL }
+
+            p.provider.setActivePoolProfile(p.profile)
+            for (let rig of p.rigs_to_rent) {
+                rig.rental_info.profile = p.profile
+            }
+
+            let price = 0,
+                //   limit = 0,
+                selectedRigsTHs = 0,
+                last10AvgCostMrrScrypt = 0,
+                selectedRigsRentalCost = 0,
+                duration = options.duration;
+            last10AvgCostMrrScrypt += p.provider.getRentalCost(p.rigs_to_rent); // amount
+            // limit += (p.provider.getTotalHashPower(p.rigs_to_rent) / 1000 / 1000)
+            selectedRigsTHs += p.provider.getTotalHashPower(p.rigs_to_rent) / 1000 / 1000; // limit
+            price = toNiceHashPrice(last10AvgCostMrrScrypt, selectedRigsTHs, duration)
+            selectedRigsRentalCost += selectedRigsTHs * 1000 * last10AvgCostMrrScrypt / (24 * duration)
+            let market = MiningRigRentals
+            let balance = p.balance
+
+            if (cost_found > balance) {
+                status.status = WARNING
+                status.type = LOW_BALANCE
+                if (hashrate_found < hashrateMin) {
+                    status.warning = LOW_HASHRATE
+                    status.message = `Can only find ${((hashrate_found / options.hashrate) * 100).toFixed(2)}% of the hashrate desired`
+                }
+            } else if (p.rigs_to_rent.length === 0) {
+                status.status = ERROR
+                status.type = "NO_RIGS_FOUND"
+            }
+
+            providerBadges.push({
+                market,
+                status,
+                last10AvgCostMrrScrypt,
+                duration,
+                selectedRigsTHs,
+                selectedRigsRentalCost,
+                balance,
+                query: {
+                    hashrate_found,
+                    cost_found,
+                    duration: options.duration
+                },
+                uid: p.uid,
+                rigs: p.rigs_to_rent,
+                provider: p.provider
+            })
+        }
+        if (providerBadges.length === 1) {
+            return { success: true, badges: providerBadges[0] }
+        } else {
+            return { success: true, badges: providerBadges }
+        }
+    }
 
 	/**
      * Compare MiningRigRentals and NiceHash market to find which market to rent with
@@ -210,7 +256,7 @@ class AutoRenter {
      * @param {Number} options.duration - The duration (IN HOURS) that you wish to rent hashrate for
      * @return {Promise<String>} Returns a Promise that will resolve to a string for which market to rent with
      */
-	async compareMarkets(options) {
+    async compareMarkets(options) {
         console.log('OPTIONS AUTORENT.JS #269', options)
         const niceHashDuration = 24
         const minNiceHashAmount = 0.005
@@ -219,7 +265,7 @@ class AutoRenter {
         let niceHash = {}
         let roundNumber = (num) => {
             return num + .0001
-            return +(Math.round(num + "e+2")  + "e-2"); // Rounds up the thousands .0019 => 002
+            return +(Math.round(num + "e+2") + "e-2"); // Rounds up the thousands .0019 => 002
         }
 
         /**
@@ -232,7 +278,7 @@ class AutoRenter {
             // hashrate is based on if current hashrate is below the threshold NiceHash allows of .01
             let hashrate = hashrateNH < 0.01 ? .01 : hashrateNH
             let amount = ((niceHashDuration * hashrate * niceHash.marketPriceNhScryptBtcThSD) / 24).toFixed(11)
-            return {amount, hashrate}
+            return { amount, hashrate }
         }
 
         try {
@@ -273,17 +319,17 @@ class AutoRenter {
 
                 console.log('amount: AutoRent.js line 328 hit')
 
-                let lowestPriceGHs = niceHash.marketPriceNhScryptBtcThSD  / 1000
+                let lowestPriceGHs = niceHash.marketPriceNhScryptBtcThSD / 1000
 
                 options.amount = getNiceHashAmount(options.hashrate).amount
                 options.limit = getNiceHashAmount(options.hashrate).hashrate
                 options.price = niceHash.marketPriceNhScryptBtcThSD
                 options.duration = 24
                 // Checks if the new renting hashrate price is lower than the min amount NiceHash accepts of 0.005
-                if ( lowestPriceGHs < minNiceHashAmount ) {
+                if (lowestPriceGHs < minNiceHashAmount) {
 
                     console.log('options:  Autorenter.js 316', options)
-                    const MinPercentFromMinAmount = ( 24 * .005 ) / ( (24 * .005 ) + ( ( ( options.difficulty * Math.pow(2,32) ) / 40 ) / 1000000000000 * niceHash.marketPriceNhScryptBtcThSD * 24 ) )
+                    const MinPercentFromMinAmount = (24 * .005) / ((24 * .005) + (((options.difficulty * Math.pow(2, 32)) / 40) / 1000000000000 * niceHash.marketPriceNhScryptBtcThSD * 24))
                     console.log('MinPercentFromMinAmount:', MinPercentFromMinAmount)
                     let getNewHashrate = await options.newRent(token, MinPercentFromMinAmount)
                     console.log('getNewHashrate:', getNewHashrate)
@@ -293,7 +339,8 @@ class AutoRenter {
                     options.amount = newAmount
                     console.log('newAmount:', options.amount)
 
-                    let msg = JSON.stringify({info: `Your current percent of ${options.Xpercent}% increased to ${MinPercentFromMinAmount}% 
+                    let msg = JSON.stringify({
+                        info: `Your current percent of ${options.Xpercent}% increased to ${MinPercentFromMinAmount}% 
                     in order to rent with NiceHash's min. Amount
                     of 0.005`})
                     emitter.emit('message', msg)
@@ -306,12 +353,12 @@ class AutoRenter {
             if (MRR.success && niceHash.success) {
 
                 let niceHashPriceGHs = niceHash.marketPriceNhScryptBtcThSD / 1000
-                console.log('marketPriceNhScryptBtcThSD:', niceHashPriceGHs, 'MRR.marketPriceMrrScryptBtcThSD',  MRR.marketPriceMrrScryptBtcThSD)
+                console.log('marketPriceNhScryptBtcThSD:', niceHashPriceGHs, 'MRR.marketPriceMrrScryptBtcThSD', MRR.marketPriceMrrScryptBtcThSD)
 
 
                 if (MRR.marketPriceMrrScryptBtcThSD < niceHashPriceGHs) {
 
-                    let msg = JSON.stringify({info: `from MiningRigRentals`})
+                    let msg = JSON.stringify({ info: `from MiningRigRentals` })
                     emitter.emit('message', msg)
 
                     return 'MiningRigRentals'
@@ -321,7 +368,7 @@ class AutoRenter {
             }
             // If user only chooses one market to begin with return that market
             const market = MRR.success ? 'MiningRigRentals' : await niceHashCalculation()
-            emitter.emit('message', JSON.stringify({market: market}))
+            emitter.emit('message', JSON.stringify({ market: market }))
 
             return market
         } catch (e) {
@@ -338,8 +385,8 @@ class AutoRenter {
 	 * @return {Promise<Object>} Returns a Promise that will resolve to an Object containing info about the rental made
 	 */
 
-	// Gets hit from within rent() in AutoRenter.js below
-	async rentPreprocess(options) {
+    // Gets hit from within rent() in AutoRenter.js below
+    async rentPreprocess(options) {
         let market = await this.compareMarkets(options)
         console.log('autorent.js market:', market)
 
@@ -384,16 +431,16 @@ class AutoRenter {
         }
         console.log('BADGES LINE 370 AUTORENTER', badges)
         return badges
-        return {status: NORMAL, badges: usable_badges}
-	}
+        return { status: NORMAL, badges: usable_badges }
+    }
 
-	 /**
-     * Selects the best rental options from the returned preprocess function
-     * @param {Object} preprocess - the returned object from manualRentPreprocess()
-     * @param {Object} options - options passed down into manualRent func (hashrate, duration)
-     * @returns {Promise<{Object}>}
-     * WAS rentSelector() {} - REMOVED
-     */
+    /**
+    * Selects the best rental options from the returned preprocess function
+    * @param {Object} preprocess - the returned object from manualRentPreprocess()
+    * @param {Object} options - options passed down into manualRent func (hashrate, duration)
+    * @returns {Promise<{Object}>}
+    * WAS rentSelector() {} - REMOVED
+    */
 
 
 	/**
@@ -405,8 +452,8 @@ class AutoRenter {
 	 * @return {Promise<Object>} Returns a Promise that will resolve to an Object containing info about the rental made
 	 */
 
-	// Gets hit from SpartanBot.js rent()
-	async rent(options) {
+    // Gets hit from SpartanBot.js rent()
+    async rent(options) {
         let inputOptions = options.options
         console.log('options: AutoRenter.js 466')
 
@@ -522,14 +569,14 @@ class AutoRenter {
             rentals,
             type: RECEIPT
         };
-       console.log( 'AUTORENTER.JS line 665 returnData:' , returnData )
+        console.log('AUTORENTER.JS line 665 returnData:', returnData)
 
-       setTimeout(async()=> {
-            let transactions = {start: 0, limit: 100}
+        setTimeout(async () => {
+            let transactions = { start: 0, limit: 100 }
             console.log('TIMER RAN AUTORENTER.JS 529')
             for (let badge of badges) {
                 let res = await provider.getTransactions(transactions)
-                console.log('getTransactions DURING Renting: from autorenter.js 532',res.data.transactions)
+                console.log('getTransactions DURING Renting: from autorenter.js 532', res.data.transactions)
             }
         }, 10000)
 
@@ -543,48 +590,48 @@ class AutoRenter {
 	 * @param {number} duration - the amount of time to let the rental run
 	 * @returns {void}
 	 */
-	cutoffRental(id, uid, duration) {
-		console.log("Cutoff rental, GO!")
-		let cutoffTime = Date.now() + duration * 60 * 60 * 1000
-		let check = async () => {
-			console.log("checking time")
-			if (Date.now() >= cutoffTime) {
-				let _provider
-				for (let provider of this.rental_providers) {
-					if (provider.getUID() === uid) {
-						_provider = provider
-						break
-					}
-				}
-				let cancel = await _provider.cancelRental(id)
-				if (cancel.success) {
-					//ToDo: Write to log
-					if (!this.cancellations) {
-						this.cancellations = []
-					}
-					console.log(`Cancelled Order ${id}`, cancel)
-					this.cancellations.push(cancel)
-				} else {
-					if (cancel.errorType === 'NETWORK') {
-						//ToDo: Write to log
-						console.log("network error", cancel)
-						setTimeout(check, 60 * 1000)
-					}
-					if (cancel.errorType === 'NICEHSAH') {
-						//ToDo: Write to log
-						console.log(`Failed to cancel order: ${id}`, cancel)
-						if (!this.cancellations) {
-							this.cancellations = []
-						}
-						this.cancellations.push(cancel)
-					}
-				}
-			} else {
-				setTimeout(check, 60 * 1000)
-			}
-		}
-		setTimeout(check, 60 * 1000)
-	}
+    cutoffRental(id, uid, duration) {
+        console.log("Cutoff rental, GO!")
+        let cutoffTime = Date.now() + duration * 60 * 60 * 1000
+        let check = async () => {
+            console.log("checking time")
+            if (Date.now() >= cutoffTime) {
+                let _provider
+                for (let provider of this.rental_providers) {
+                    if (provider.getUID() === uid) {
+                        _provider = provider
+                        break
+                    }
+                }
+                let cancel = await _provider.cancelRental(id)
+                if (cancel.success) {
+                    //ToDo: Write to log
+                    if (!this.cancellations) {
+                        this.cancellations = []
+                    }
+                    console.log(`Cancelled Order ${id}`, cancel)
+                    this.cancellations.push(cancel)
+                } else {
+                    if (cancel.errorType === 'NETWORK') {
+                        //ToDo: Write to log
+                        console.log("network error", cancel)
+                        setTimeout(check, 60 * 1000)
+                    }
+                    if (cancel.errorType === 'NICEHSAH') {
+                        //ToDo: Write to log
+                        console.log(`Failed to cancel order: ${id}`, cancel)
+                        if (!this.cancellations) {
+                            this.cancellations = []
+                        }
+                        this.cancellations.push(cancel)
+                    }
+                }
+            } else {
+                setTimeout(check, 60 * 1000)
+            }
+        }
+        setTimeout(check, 60 * 1000)
+    }
 }
 
 export default AutoRenter
