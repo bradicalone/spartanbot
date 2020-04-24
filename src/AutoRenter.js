@@ -271,12 +271,6 @@ class AutoRenter {
             return +(Math.round(num + "e+2")  + "e-2"); // Rounds up the thousands .0019 => 002
         }
 
-        /**
-         * Get NiceHash configured amount
-         * @param {Number} hashrateNH - hashrate from either options.hashrate or new hashrate coming from getNewHashrate()
-         * @return {<String>} Returns a Promise that will resolve to a string for which market to rent with
-         */
-
         let getNiceHashAmount = (hashrateNH) => {
             // hashrate is based on if current hashrate is below the threshold NiceHash allows of .01
             let hashrate = hashrateNH < 0.01 ? .01 : hashrateNH
