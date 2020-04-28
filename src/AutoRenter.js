@@ -285,7 +285,6 @@ class AutoRenter {
         /**
          * Get NiceHash configured amount
          * @param {Number} hashrateNH - hashrate from either options.hashrate or new hashrate coming from getNewHashrate()
-         * @return {<String>} Returns a Promise that will resolve to a string for which market to rent with
          */
   
         let getNiceHashAmount = (hashrateNH) => {
