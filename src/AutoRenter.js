@@ -266,145 +266,141 @@ class AutoRenter {
      * @param {Number} options.duration - The duration (IN HOURS) that you wish to rent hashrate for
      * @return {Promise<String>} Returns a Promise that will resolve to a string for which market to rent with
      */
+  
     async compareMarkets(options) {
-        const niceHashDuration = 24  
-        const minNiceHashAmount = 0.005
-        const token = options.token
-        const BittrexWithdrawalFee = 0.0005
-        const BittrexMinMultiplier = 4
-        const BittrexMinWithdrawal = BittrexWithdrawalFee * BittrexMinMultiplier
-        const MinPercent = 0.35
-  
-        let MRR = {}
-        let niceHash = {}
-        let roundNumber = (num) => {
-            return num + .0001
-            return +(Math.round(num + "e+2")  + "e-2"); // Rounds up the thousands .0019 => 002
-        }
-  
+        const niceHashDuration = 24;
+        const minNiceHashAmount = 0.005;
+        const token = options.token;
+        const BittrexWithdrawalFee = 0.0005;
+        const BittrexMinMultiplier = 4;
+        const BittrexMinWithdrawal = BittrexWithdrawalFee * BittrexMinMultiplier;
+        const MinPercent = 0.35;
+        let MRR = {};
+        let niceHash = {};
+
+        let roundNumber = num => {
+            return num + .0001;
+            return +(Math.round(num + "e+2") + "e-2"); // Rounds up the thousands .0019 => 002
+        };
         /**
          * Get NiceHash configured amount
          * @param {Number} hashrateNH - hashrate from either options.hashrate or new hashrate coming from getNewHashrate()
          */
-  
-        let getNiceHashAmount = (hashrateNH) => {
+
+
+        let getNiceHashAmount = hashrateNH => {
             // hashrate is based on if current hashrate is below the threshold NiceHash allows of .01
-            let hashrate = hashrateNH < 0.01 ? .01 : hashrateNH
-            let amount = ((niceHashDuration * hashrate * niceHash.marketPriceNhScryptBtcThSD) / 24).toFixed(11)
-            return {amount, hashrate}
-        }
-       
+            let hashrate = hashrateNH < 0.01 ? .01 : hashrateNH;
+            let amount = (niceHashDuration * hashrate * niceHash.marketPriceNhScryptBtcThSD / 24).toFixed(11);
+            return {
+                amount,
+                hashrate
+            };
+        };
+
         try {
-  
             for (let provider of this.rental_providers) {
-                console.log('provider.getInternalType()', provider.getInternalType())
+                console.log('provider.getInternalType()', provider.getInternalType());
+
                 if (provider.getInternalType() === MiningRigRentals) {
-                   
                     // Switch hashrate to MH/s due to MRR accepts it that way
                     // let hashrate = options.hashrate * 1000000
-                    let response = await provider.getAlgo('scrypt', 'BTC')
-                    console.log('response: autorenter.js 281', response)
-                    // Returns amount in GH/s
-                    MRR.success = true
-                    MRR.marketPriceMrrScryptBtcThSD = response.data.suggested_price.amount
+                    let response = await provider.getAlgo('scrypt', 'BTC');
+                    console.log('response: autorenter.js 281', response); // Returns amount in GH/s
+
+                    MRR.success = true;
+                    MRR.marketPriceMrrScryptBtcThSD = response.data.suggested_price.amount;
+                    this.updateDailyBudget(options, MRR.marketPriceMrrScryptBtcThSD)
                 }
+
                 if (provider.getInternalType() === NiceHash) {
-                    let orderBook = await provider.getOrderBook()
-                    let orders = orderBook.stats.USA.orders
-                    let length = orders.length
-                    let lowestPrice = orders[0].price
+                    let orderBook = await provider.getOrderBook();
+                    let orders = orderBook.stats.USA.orders;
+                    let length = orders.length;
+                    let lowestPrice = orders[0].price;
+
                     for (let i = 0; i < length; i++) {
                         if (orders[i].rigsCount > 0) {
                             if (orders[i].price < lowestPrice) {
-                                lowestPrice = orders[i].price
+                                lowestPrice = orders[i].price;
                             }
                         }
                     }
-                    
-                    niceHash.success = true
-                    niceHash.marketPriceNhScryptBtcThSD = lowestPrice
-                    console.log('marketPriceNhScryptBtcThSD: autoRenter.js line 294', niceHash)
-                    //convert TH/s to GH/s by / 1000 for comparing markets
+
+                    niceHash.success = true;
+                    niceHash.marketPriceNhScryptBtcThSD = lowestPrice;
+                    console.log('marketPriceNhScryptBtcThSD: autoRenter.js line 294', niceHash); //convert TH/s to GH/s by / 1000 for comparing markets
                 }
             }
-  
+
             let niceHashCalculation = async () => {
-  
-                console.log('amount: AutoRent.js line 336 hit')
-  
-                let lowestPriceGHs = niceHash.marketPriceNhScryptBtcThSD  / 1000
-  
-                options.amount = getNiceHashAmount(options.hashrate).amount
-                options.limit = getNiceHashAmount(options.hashrate).hashrate
-                options.price = niceHash.marketPriceNhScryptBtcThSD
-                // options.duration = 24
+                console.log('amount: AutoRent.js line 336 hit');
+                let lowestPriceGHs = niceHash.marketPriceNhScryptBtcThSD / 1000;
+                options.amount = getNiceHashAmount(options.hashrate).amount;
+                options.limit = getNiceHashAmount(options.hashrate).hashrate;
+                options.price = niceHash.marketPriceNhScryptBtcThSD; // options.duration = 24
+
                 // Checks if the new renting hashrate price is lower than the min amount NiceHash accepts of 0.005
-                if ( lowestPriceGHs < minNiceHashAmount ) {
-                        
-                    console.log('options:  Autorenter.js 316', options)
-                    const MinPercentFromMinAmount = ( 24 * .005 ) / ( (24 * .005 ) + ( ( ( options.difficulty * Math.pow(2,32) ) / 40 ) / 1000000000000 * niceHash.marketPriceNhScryptBtcThSD * 24 ) )
-                    console.log('MinPercentFromMinAmount:', MinPercentFromMinAmount)
-  
-                    let getNewHashrate = await options.newRent(token, MinPercentFromMinAmount)
-                    console.log('getNewHashrate:', getNewHashrate)
-  
-                    let hashrateRoundedUp = roundNumber(getNewHashrate.Rent)
-  
-                    let newAmount = getNiceHashAmount(hashrateRoundedUp).amount
-                    options.amount = newAmount
-       
-  
+                if (lowestPriceGHs < minNiceHashAmount) {
+                    console.log('options:  Autorenter.js 316', options);
+                    const MinPercentFromMinAmount = 24 * .005 / (24 * .005 + options.difficulty * Math.pow(2, 32) / 40 / 1000000000000 * niceHash.marketPriceNhScryptBtcThSD * 24);
+
+                    let getNewHashrate = await options.newRent(token, MinPercentFromMinAmount);
+
+                    let hashrateRoundedUp = roundNumber(getNewHashrate.Rent);
+                    let newAmount = getNiceHashAmount(hashrateRoundedUp).amount;
+                    options.amount = newAmount;
                     let msg = JSON.stringify({
                         update: true,
-                        message: `Your current percent of ${options.Xpercent}% increased to ${(MinPercentFromMinAmount*100).toFixed(2)}% `+
-                        `in order to rent with NiceHash's min. Amount of 0.005`,
-                        Xpercent: (MinPercentFromMinAmount*100).toFixed(2)
+                        message: "Your current percent of ".concat(options.Xpercent, "% increased to ").concat((MinPercentFromMinAmount * 100).toFixed(2), "% ") + "in order to rent with NiceHash's min. Amount of 0.005",
+                        Xpercent: (MinPercentFromMinAmount * 100).toFixed(2)
                     });
-                    emitter.emit('message', msg)
-  
+                    emitter.emit('message', msg);
                 }
-                console.log('Amount: autorent.js line 353', options.amount)
-                return 'NiceHash'
-            }
-            //1st Check
-            const MinPercentFromBittrexMinWithdrawal = BittrexMinWithdrawal / (BittrexMinWithdrawal + ( options.NetworkHashRate * MRR.marketPriceMrrScryptBtcThSD * (options.duration*6)) )
-            if (MinPercent < MinPercentFromBittrexMinWithdrawal ) {
-              let msg = JSON.stringify({
-                update: true,
-                message: `In order to mine with the given token of ${options.Xpercent} must increase your pecent to ${(MinPercentFromBittrexMinWithdrawal*100).toFixed(2)}% , `+
-                          `and try renting again.`,
-                autoRent: false
-              });
-              emitter.emit('message', msg)
-              return false
-            }
-  
-            // Whitchever market is cheaper return that market
+
+                console.log('Amount: autorent.js line 353', options.amount);
+                return 'NiceHash';
+            }; //1st Check
+
+
+            const MinPercentFromBittrexMinWithdrawal = BittrexMinWithdrawal / (BittrexMinWithdrawal + options.NetworkHashRate * MRR.marketPriceMrrScryptBtcThSD * (options.duration * 7));
+            
+            console.log('MinPercent, MinPercentFromBittrexMinWithdrawal:', MinPercent, MinPercentFromBittrexMinWithdrawal)
+            if (MinPercent < MinPercentFromBittrexMinWithdrawal) {
+                let msg = JSON.stringify({
+                    update: true,
+                    message: "In order to mine with the given token of ".concat(options.Xpercent, " must increase your pecent to ").concat((MinPercentFromBittrexMinWithdrawal * 100.1).toFixed(2), "% , ") + "and try renting again.",
+                    autoRent: false
+                });
+                emitter.emit('message', msg);
+                return false;
+            } // Whitchever market is cheaper return that market
             // 2nd Check
+
+
             if (MRR.success && niceHash.success) {
-  
-                let niceHashPriceGHs = niceHash.marketPriceNhScryptBtcThSD / 1000
-                console.log('marketPriceNhScryptBtcThSD:', niceHashPriceGHs, 'MRR.marketPriceMrrScryptBtcThSD',  MRR.marketPriceMrrScryptBtcThSD)
-  
-                //3rd Check
+                let niceHashPriceGHs = niceHash.marketPriceNhScryptBtcThSD / 1000;
+
                 if (MRR.marketPriceMrrScryptBtcThSD < niceHashPriceGHs) {
-        
-                    let msg = JSON.stringify({info: `from MiningRigRentals`})
-                    emitter.emit('message', msg)
-                     
-                    return 'MiningRigRentals'
+                    let msg = JSON.stringify({
+                        info: "from MiningRigRentals"
+                    });
+                    emitter.emit('message', msg);
+                    return 'MiningRigRentals';
                 } else {
-                    return niceHashCalculation()
+                    return niceHashCalculation();
                 }
-            }
+            } 
+
             // If user only chooses one market to begin with return that market
-            const market = MRR.success ? 'MiningRigRentals' : niceHashCalculation()
-            emitter.emit('message', JSON.stringify({market: market}))
-  
-            return market
+            const market = MRR.success ? 'MiningRigRentals' : niceHashCalculation();
+            emitter.emit('message', JSON.stringify({
+                market: market
+            }));
+            return market;
         } catch (e) {
-            console.log('compareMarkets function error : ', e)
-            return `compareMarkets function error : ', ${e}`
+            console.log('compareMarkets function error : ', e);
+            return "compareMarkets function error : ', ".concat(e);
         }
     }
 
@@ -461,11 +457,10 @@ class AutoRenter {
         }
 
         for (let prov of nhProviders) {
-            console.log('autorenter.js line 363 options.hashrate ', options.hashrate, 'options.duration', options.duration)
             //   badges.push((await prov.preprocessRent(options.hashrate, options.duration))); // Hits NiceHashProvider.js preprocessRent()
             badges.push((await prov.preprocessRent(options))); // Hits NiceHashProvider.js preprocessRent()
         }
-        console.log('BADGES LINE 370 AUTORENTER', badges)
+
         // return badges
         return {
             status: NORMAL,
@@ -536,18 +531,22 @@ class AutoRenter {
             };
         } //confirm/select
 
-
-        // let badges = preprocess.badges;
         let badges = preprocess.badges; //rent
-
 
         //rent
         let rentals = [];
 
         for (let badge of badges) {
-
+            let status = badge.status.status
             console.log('BADGE PROVIDER AutoRenter.js line 606 ENDS HERE! CHANGE RETURN', badge)
-
+            if (status === 'WARNING') {
+                if(badge.status.type === 'LOW_BALANCE') {
+                    emitter.emit('message', JSON.stringify({
+                        update: true,
+                        message: 'Warning: Low balance in your account'
+                    }));
+                }
+            }
             let rentalReturn = await badge.provider.rent(badge); //RentalProvider.js rent()
 
             for (let rental of rentalReturn) {
