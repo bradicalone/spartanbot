@@ -342,13 +342,11 @@ class AutoRenter {
 
                 // Checks if the new renting hashrate price is lower than the min amount NiceHash accepts of 0.005
                 if (lowestPriceGHs < minNiceHashAmount) {
-                    console.log('options:  Autorenter.js 316', options);
                     const MinPercentFromMinAmount = 24 * .005 / (24 * .005 + options.difficulty * Math.pow(2, 32) / 40 / 1000000000000 * niceHash.marketPriceNhScryptBtcThSD * 24);
-
                     let getNewHashrate = await options.newRent(token, MinPercentFromMinAmount);
-
                     let hashrateRoundedUp = roundNumber(getNewHashrate.Rent);
                     let newAmount = getNiceHashAmount(hashrateRoundedUp).amount;
+
                     options.amount = newAmount;
                     let msg = JSON.stringify({
                         update: true,
@@ -365,8 +363,8 @@ class AutoRenter {
 
             const MinPercentFromBittrexMinWithdrawal = BittrexMinWithdrawal / (BittrexMinWithdrawal + options.NetworkHashRate * MRR.marketPriceMrrScryptBtcThSD * (options.duration * 7));
             
-            console.log('MinPercent, MinPercentFromBittrexMinWithdrawal:', MinPercent, MinPercentFromBittrexMinWithdrawal)
-            if (MinPercent < MinPercentFromBittrexMinWithdrawal) {
+            console.log('MinPercentFromBittrexMinWithdrawal, options.Xpercent:', MinPercentFromBittrexMinWithdrawal, options.Xpercent)
+            if (options.Xpercent < MinPercentFromBittrexMinWithdrawal) {
                 let msg = JSON.stringify({
                     update: true,
                     message: "In order to mine with the given token of ".concat(options.Xpercent, " must increase your pecent to ").concat((MinPercentFromBittrexMinWithdrawal * 100.1).toFixed(2), "% , ") + "and try renting again.",
