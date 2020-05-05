@@ -606,15 +606,60 @@ class AutoRenter {
             type: RECEIPT
         };
         console.log('AUTORENTER.JS line 665 returnData:', returnData)
-        let msg = JSON.stringify(returnData)
-        setTimeout(async () => {
-            let transactions = { start: 0, limit: 100 }
-            console.log('TIMER RAN AUTORENTER.JS 529')
-            let res = await preprocess.badges[0].provider.getTransactions(transactions);
-                console.log('getTransactions DURING Renting: from autorenter.js 532', res.data.transactions)
-        }, 10000)
-
-        return returnData
+        if (returnData.status === 'ERROR') {
+            let msg = JSON.stringify({
+                update: true,
+                message: returnData.message,
+                autoRent: false
+            });
+            emitter.emit('message', msg);
+           return returnData
+        } else {
+            let getCostOfRental = (ids, transactions) => {
+                let ids_length = ids.length
+                let transaction_length = transactions.length
+                let amount = 0
+                for (let i = 0; i < ids_length; i++) {
+                    let id = ids[i]
+                    for (let j = 0; j < transaction_length; j++) {
+                        if (id === transactions[j].rig) {
+                            amount += Number(transactions[j].amount)
+                        }
+                    }
+                }
+                let msg = JSON.stringify({
+                    update: true,
+                    message: `Current cost of rental in BTC: ${amount}`,
+                });
+                emitter.emit('message', msg);
+            }
+            setTimeout( async () => {
+                try {
+                    let ids = []
+                    let successCount = 0
+                    let rentals = returnData.rentals
+                    let length = rentals.length        
+                    console.log('length:', length)
+                    
+                    for (let i = 0; i < length; i++) {
+                        if (rentals[i].success === true) {
+                            successCount++
+                            ids.push(rentals[i].id)
+                        }
+                    }
+                    let params = {
+                        start: 0,
+                        limit: successCount * 2
+                    };
+                    let res = await preprocess.badges[0].provider.getTransactions(params);
+                    let transactions = res.data.transactions
+                    getCostOfRental(ids, transactions)
+                } catch (e) {
+                    console.log('ERROR SETTIMEOUT: ', e)
+                }
+            }, 1000);
+            return returnData;
+        }
     }
 
 	/**

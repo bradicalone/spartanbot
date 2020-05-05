@@ -649,7 +649,10 @@ class MRRProvider extends RentalProvider {
 		let rented_rigs = []
 
 		for (let rig in rentalConfirmation){
-			if (rentalConfirmation[rig].success){
+			if (rentalConfirmation[rig] === undefined){
+				rented_rigs.push({success: false, message: `Error in API`, error: `Error in API`, status: ERROR})
+				break;
+			} else if (rentalConfirmation[rig].success){
 				let rentalObject = {}
 				rentalObject.market = "MiningRigRentals"
 				rentalObject.success = true
