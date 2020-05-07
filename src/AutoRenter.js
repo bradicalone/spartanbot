@@ -640,7 +640,7 @@ class AutoRenter {
                 }
                 let msg = JSON.stringify({
                     update: true,
-                    message: `Current cost of rental in BTC: ${amount}`,
+                    message: `Current cost of rental in BTC :  ${(amount).toFixed(9)}`,
                 });
                 emitter.emit('message', msg);
             }
