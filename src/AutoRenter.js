@@ -259,6 +259,26 @@ class AutoRenter {
         }
     }
 
+    async updateDailyBudget(options, MarketPrice) {
+        let priceUSD = await options.PriceBtcUsd()
+        const PriceBtcUsd = priceUSD.data.rates.USD
+        const NetworkhashrateFlo = options.NetworkHashRate
+        const MarketPriceMrrScrypt = MarketPrice * 1000/24  // convert to TH/s devided by 24 => 1000/24
+        const Duration = options.duration
+        const Percent = options.Xpercent/100
+        const Margin = options.targetMargin/100
+        const ProfitReinvestmentRate = options.profitReinvestment/100
+ 
+       console.log('NetworkhashrateFlo: ', NetworkhashrateFlo, 'MarketPriceMrrScrypt: ', MarketPriceMrrScrypt, 'Duration: ', Duration,  'Percent: ', Percent, 'PriceBtcUsd: ', PriceBtcUsd,  'Margin: ',Margin, 'ProfitReinvestmentRate: ', ProfitReinvestmentRate)
+        let EstRentalBudgetPerCycleUSD = NetworkhashrateFlo * MarketPriceMrrScrypt * Duration * 
+                                        ( -Percent / ( -1 + Percent ) ) * PriceBtcUsd * ( Margin * ProfitReinvestmentRate + 1 )
+        console.log('EstRentalBudgetPerCycleUSD:', EstRentalBudgetPerCycleUSD)
+        let msg = JSON.stringify({
+            dailyBudget: (EstRentalBudgetPerCycleUSD).toFixed(2)
+        });
+        emitter.emit('message', msg);
+    }
+
 	/**
      * Compare MiningRigRentals and NiceHash market to find which market to rent with
      * @param {Object} options - The Options for the rental operation
@@ -282,11 +302,6 @@ class AutoRenter {
             return num + .0001;
             return +(Math.round(num + "e+2") + "e-2"); // Rounds up the thousands .0019 => 002
         };
-        /**
-         * Get NiceHash configured amount
-         * @param {Number} hashrateNH - hashrate from either options.hashrate or new hashrate coming from getNewHashrate()
-         */
-
 
         let getNiceHashAmount = hashrateNH => {
             // hashrate is based on if current hashrate is below the threshold NiceHash allows of .01
@@ -329,12 +344,10 @@ class AutoRenter {
 
                     niceHash.success = true;
                     niceHash.marketPriceNhScryptBtcThSD = lowestPrice;
-                    console.log('marketPriceNhScryptBtcThSD: autoRenter.js line 294', niceHash); //convert TH/s to GH/s by / 1000 for comparing markets
                 }
             }
 
             let niceHashCalculation = async () => {
-                console.log('amount: AutoRent.js line 336 hit');
                 let lowestPriceGHs = niceHash.marketPriceNhScryptBtcThSD / 1000;
                 options.amount = getNiceHashAmount(options.hashrate).amount;
                 options.limit = getNiceHashAmount(options.hashrate).hashrate;
@@ -350,18 +363,18 @@ class AutoRenter {
                     options.amount = newAmount;
                     let msg = JSON.stringify({
                         update: true,
-                        message: "Your current percent of ".concat(options.Xpercent, "% increased to ").concat((MinPercentFromMinAmount * 100).toFixed(2), "% ") + "in order to rent with NiceHash's min. Amount of 0.005",
-                        Xpercent: (MinPercentFromMinAmount * 100).toFixed(2)
+                        message: "Your current percent of ".concat(options.Xpercent, "% increased to ").concat((MinPercentFromMinAmount * 100.1).toFixed(2), "% ") + "in order to rent with NiceHash's min. Amount of 0.005",
+                        Xpercent: (MinPercentFromMinAmount * 100.1).toFixed(2)
                     });
                     emitter.emit('message', msg);
                 }
 
                 console.log('Amount: autorent.js line 353', options.amount);
                 return 'NiceHash';
-            }; //1st Check
+            };
 
-
-            const MinPercentFromBittrexMinWithdrawal = BittrexMinWithdrawal / (BittrexMinWithdrawal + options.NetworkHashRate * MRR.marketPriceMrrScryptBtcThSD * (options.duration * 7));
+            //1st Check
+            const MinPercentFromBittrexMinWithdrawal = BittrexMinWithdrawal / (BittrexMinWithdrawal + options.NetworkHashRate * MRR.marketPriceMrrScryptBtcThSD * options.duration);
             
             console.log('MinPercentFromBittrexMinWithdrawal, options.Xpercent:', MinPercentFromBittrexMinWithdrawal, options.Xpercent)
             if (options.Xpercent < MinPercentFromBittrexMinWithdrawal) {
@@ -372,10 +385,10 @@ class AutoRenter {
                 });
                 emitter.emit('message', msg);
                 return false;
-            } // Whitchever market is cheaper return that market
+            } 
+
+            // Whitchever market is cheaper return that market
             // 2nd Check
-
-
             if (MRR.success && niceHash.success) {
                 let niceHashPriceGHs = niceHash.marketPriceNhScryptBtcThSD / 1000;
 
@@ -413,7 +426,7 @@ class AutoRenter {
     // Gets hit from within rent() in AutoRenter.js below
     async rentPreprocess(options) {
         let market = await this.compareMarkets(options)
-        console.log('autorent.js market:', market)
+
         if (market === false) {
             return {
               status: ERROR,
@@ -439,7 +452,6 @@ class AutoRenter {
 
         if (mrrProviders.length >= 1) {
             let mrrPreprocess = await this.mrrRentPreprocess(options);
-            console.log('mrrPreprocess:', mrrPreprocess)
 
             if (!mrrPreprocess.success) {
                 return mrrPreprocess;
@@ -490,12 +502,10 @@ class AutoRenter {
         console.log('options: AutoRenter.js 466')
 
         if (!this.rental_providers || this.rental_providers.length === 0) {
-            return {
-                status: ERROR,
-                success: false,
-                type: "NO_RENTAL_PROVIDERS",
-                message: "Rent Cancelled, no RentalProviders found to rent from"
-            };
+            emitter.emit('message', JSON.stringify({
+                autoRent: false,
+                message: 'Rent Cancelled, no RentalProviders found to rent from'
+            }));
         }
 
         let preprocess;
@@ -539,12 +549,13 @@ class AutoRenter {
             console.log('BADGE PROVIDER AutoRenter.js line 606 ENDS HERE! CHANGE RETURN', badge)
             if (status === 'WARNING') {
                 if(badge.status.type === 'LOW_BALANCE') {
-                    emitter.emit('message', JSON.stringify({
-                        update: true,
-                        message: 'Warning: Low balance in your account'
+                    return  emitter.emit('message', JSON.stringify({
+                            update: true,
+                            message: 'Warning: Low balance in your account'
                     }));
                 }
             }
+            //Rent
             let rentalReturn = await badge.provider.rent(badge); //RentalProvider.js rent()
 
             for (let rental of rentalReturn) {

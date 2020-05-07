@@ -49,9 +49,9 @@ class NiceHashProvider extends RentalProvider {
 	 * @async
 	 * @returns {Promise<Number>}
 	 */
-	async _getBalance() {
+	async _getBalance(currency) {
 		try {
-			return await this.api.getBalance()
+			return await this.api.getBalance(currency)
 		} catch (err) {
 			throw new Error(`Failed to get balance: ${err}`)
 		}
