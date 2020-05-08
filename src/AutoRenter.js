@@ -260,23 +260,26 @@ class AutoRenter {
     }
 
     async updateDailyBudget(options, MarketPrice) {
-        let priceUSD = await options.PriceBtcUsd()
-        const PriceBtcUsd = priceUSD.data.rates.USD
-        const NetworkhashrateFlo = options.NetworkHashRate
-        const MarketPriceMrrScrypt = MarketPrice * 1000/24  // convert to TH/s devided by 24 => 1000/24
-        const Duration = options.duration
-        const Percent = options.Xpercent/100
-        const Margin = options.targetMargin/100
-        const ProfitReinvestmentRate = options.profitReinvestment/100
- 
-       console.log('NetworkhashrateFlo: ', NetworkhashrateFlo, 'MarketPriceMrrScrypt: ', MarketPriceMrrScrypt, 'Duration: ', Duration,  'Percent: ', Percent, 'PriceBtcUsd: ', PriceBtcUsd,  'Margin: ',Margin, 'ProfitReinvestmentRate: ', ProfitReinvestmentRate)
-        let EstRentalBudgetPerCycleUSD = NetworkhashrateFlo * MarketPriceMrrScrypt * Duration * 
-                                        ( -Percent / ( -1 + Percent ) ) * PriceBtcUsd * ( Margin * ProfitReinvestmentRate + 1 )
-        console.log('EstRentalBudgetPerCycleUSD:', EstRentalBudgetPerCycleUSD)
-        let msg = JSON.stringify({
-            dailyBudget: (EstRentalBudgetPerCycleUSD).toFixed(2)
-        });
-        emitter.emit('message', msg);
+        let priceUSD = await options.PriceBtcUsd();
+        const PriceBtcUsd = priceUSD.data.rates.USD;
+        const NetworkhashrateFlo = options.NetworkHashRate;
+        const MarketPriceMrrScrypt = MarketPrice * 1000 / 24; // convert to TH/s devided by 24 => 1000/24
+
+        const Duration = options.duration;
+        const Percent = options.Xpercent / 100;
+        const Margin = options.targetMargin / 100;
+        const ProfitReinvestmentRate = options.profitReinvestment / 100;
+        console.log('NetworkhashrateFlo: ', NetworkhashrateFlo, 'MarketPriceMrrScrypt: ', MarketPriceMrrScrypt, 'Duration: ', Duration, 'Percent: ', Percent, 'PriceBtcUsd: ', PriceBtcUsd, 'Margin: ', Margin, 'ProfitReinvestmentRate: ', ProfitReinvestmentRate);
+        let EstRentalBudgetPerCycleUSD = NetworkhashrateFlo * MarketPriceMrrScrypt * Duration * (-Percent / (-1 + Percent)) * PriceBtcUsd * (Margin * ProfitReinvestmentRate + 1);
+        console.log('EstRentalBudgetPerCycleUSD:', EstRentalBudgetPerCycleUSD);
+        let msg = {
+            update: true,
+            client: EstRentalBudgetPerCycleUSD.toFixed(2),
+            db: 'dailyBudget',
+            dailyBudget: EstRentalBudgetPerCycleUSD.toFixed(2)
+        };
+        
+        options.emitter.emit('rented', msg);
     }
 
 	/**
@@ -362,7 +365,6 @@ class AutoRenter {
 
                     options.amount = newAmount;
                     let msg = JSON.stringify({
-                        update: true,
                         message: "Your current percent of ".concat(options.Xpercent, "% increased to ").concat((MinPercentFromMinAmount * 100.1).toFixed(2), "% ") + "in order to rent with NiceHash's min. Amount of 0.005",
                         Xpercent: (MinPercentFromMinAmount * 100.1).toFixed(2)
                     });
@@ -502,10 +504,12 @@ class AutoRenter {
         console.log('options: AutoRenter.js 466')
 
         if (!this.rental_providers || this.rental_providers.length === 0) {
-            emitter.emit('message', JSON.stringify({
-                autoRent: false,
-                message: 'Rent Cancelled, no RentalProviders found to rent from'
-            }));
+            let msg = {
+                update: false,
+                message: 'Rent Cancelled, no rental providers found to rent from.',
+                autoRent: false
+            };
+            inputOptions.emitter.emit('rented', msg);
         }
 
         let preprocess;
@@ -618,59 +622,77 @@ class AutoRenter {
         };
         console.log('AUTORENTER.JS line 665 returnData:', returnData)
         if (returnData.status === 'ERROR') {
-            let msg = JSON.stringify({
-                update: true,
+            let msg = {
+                update: false,
                 message: returnData.message,
                 autoRent: false
-            });
-            emitter.emit('message', msg);
-           return returnData
+            };
+            inputOptions.emitter.emit('rented', msg);
+
         } else {
             let getCostOfRental = (ids, transactions) => {
-                let ids_length = ids.length
-                let transaction_length = transactions.length
-                let amount = 0
+                let ids_length = ids.length;
+                let transaction_length = transactions.length;
+                let amount = 0;
+
                 for (let i = 0; i < ids_length; i++) {
-                    let id = ids[i]
+                    let id = ids[i];
+
                     for (let j = 0; j < transaction_length; j++) {
                         if (id === transactions[j].rig) {
-                            amount += Number(transactions[j].amount)
+                            amount += Number(transactions[j].amount);
                         }
                     }
                 }
-                let msg = JSON.stringify({
+                
+                let msg = {
                     update: true,
-                    message: `Current cost of rental in BTC :  ${(amount).toFixed(9)}`,
-                });
-                emitter.emit('message', msg);
-            }
-            setTimeout( async () => {
+                    message: `Current cost of rental in BTC : ${Math.abs(amount).toFixed(8)}`,
+                    db: 'CostOfRentalBtc',
+                    CostOfRentalBtc: Math.abs(amount).toFixed(8)
+                };
+                inputOptions.emitter.emit('rented', msg);
+                return msg
+            };
+
+      
                 try {
-                    let ids = []
-                    let successCount = 0
-                    let rentals = returnData.rentals
-                    let length = rentals.length        
-                    console.log('length:', length)
-                    
+                    let ids = [];
+                    let successCount = 0;
+                    let rentals = returnData.rentals;
+                    let length = rentals.length;
+                    console.log('length:', length);
+
                     for (let i = 0; i < length; i++) {
                         if (rentals[i].success === true) {
-                            successCount++
-                            ids.push(rentals[i].id)
+                            successCount++;
+                            ids.push(rentals[i].id);
                         }
                     }
+
                     let params = {
                         start: 0,
                         limit: successCount * 2
                     };
                     let res = await preprocess.badges[0].provider.getTransactions(params);
-                    let transactions = res.data.transactions
-                    getCostOfRental(ids, transactions)
+                    let transactions = res.data.transactions;
+                    return getCostOfRental(ids, transactions);
                 } catch (e) {
-                    console.log('ERROR SETTIMEOUT: ', e)
+                    console.log('ERROR SETTIMEOUT: ', e);
                 }
-            }, 1000);
-            return returnData;
+                setTimeout(async () => {
+                    console.log('SETTIME OUT RAN AFTER 20 MINUTES')
+                    let msg = {
+                        update: false,
+                        message: `Current cost of rental in BTC : TESTING 20 MINUTES`,
+                        db: 'CostOfRentalBtc',
+                        CostOfRentalBtc: 100000000
+                    };
+                    inputOptions.emitter.emit('rented', msg);
+                }, 20 * 60 * 1000);
+            
         }
+        return returnData
     }
 
 	/**
