@@ -216,21 +216,21 @@ class NiceHashProvider extends RentalProvider {
 		return await this.api.getOrderBook()
 	}
 	// Gets hit from async rentPreprocess(options) in AutoRenter.js 
-	async preprocessRent(hashrate, duration) {
+	async preprocessRent(options) {
 
 		let status = {status: NORMAL}
 		let balance;
 		try {
-			let balance_Object = await this._getBalance()
-      		balance = Number(balance_Object.balance);
+			let balance_Object = await this._getBalance('BTC')
+      		balance = Number(balance_Object);
 		} catch (err) {
 			status.status = ERROR
 			return {success: false, message: 'failed to get balance', status}
 		}
 
-		const hashrateTH = hashrate / 1000 / 1000
-		const minimumAmount = 0.005
-		const minimumLimit = 0.01
+		const hashrateTH = options.limit
+    	const minimumAmount = 0.005;
+    	const minimumLimit = 0.01;
 
 		if (balance < minimumAmount || hashrateTH < minimumLimit) {
 			status.status = ERROR
@@ -263,68 +263,29 @@ class NiceHashProvider extends RentalProvider {
 			status.message = `Failed to get current global nice hash stats`
 		}
 
-		const desiredDuration = duration
-		const price = marketPrice
-		const limit = hashrateTH
-		let amount = minimumAmount
-
-		let idealAmount = toMRRAmount(price, duration, limit)
-		if (idealAmount <= balance && idealAmount >= minimumAmount) {
-			//rent at ideal amount for ideal time
-			amount = idealAmount
-		} else if (idealAmount > balance) {
-			//rent at balance for shorter duration
-			amount = balance
-			duration = getDuration(price, limit, amount)
-
-			// -------STATUS---------
-			status.status = WARNING
-			status.type = LOW_BALANCE
-			status.costToRent = idealAmount
-			status.balance = balance
-			status.fundsNeeded = (idealAmount - balance).toFixed(6)
-			status.duration = duration
-			status.price = price
-			status.desiredDuration = desiredDuration
-			status.message = `Don't have high enough balance to rent hash for desired duration.`
-		} else {
-			//rent at minimum for longer duration
-			amount = minimumAmount
-			duration = getDuration(price, limit, amount)
-
-			// -------STATUS---------
-			status.status = WARNING
-			status.type = CUTOFF
-			status.message = 'Ideal amount to spend for desired limit/duration is below minimum amount. ' +
-				'Either cutoff rental at desired duration or let rental finish calculated time for 0.005 BTC'
-			status.totalDuration = duration
-			status.extendedDuration = duration - desiredDuration
-			status.desiredDuration = desiredDuration
-			status.idealAmount = idealAmount
-			status.cost = amount
-			status.amountOver = amount - idealAmount
-			status.cutoffCost = getEstAmountSpent(price, limit, desiredDuration)
-		}
+		status.status = WARNING;
+		status.type = CUTOFF;
+		status.message = 'Ideal amount to spend for desired limit/duration is below minimum amount. ' + 'Either cutoff rental at desired duration or let rental finish calculated time for 0.005 BTC';
+		status.totalDuration = options.duration;
+		status.cost = options.amount;
 
 		return {
 			market: "NiceHash",
 			status,
-			amount,
-			totalHashesTH: limit * 60 * 60 * duration,
-			hashesDesiredTH: hashrateTH * 60 * 60 * desiredDuration,
-			duration,
-			limit,
-			price,
+			amount: options.amount,
+			totalHashesTH: options.limit * 60 * 60 * options.duration,
+			duration: options.duration,
+			limit: options.limit.toFixed(2),
+			price: options.price,
 			balance,
 			query: {
-				hashrate_found: limit,
-				cost_found: idealAmount,
-				duration: desiredDuration
+				hashrate_found: options.limit,
+				cost_found: options.amount,
+				duration: options.duration
 			},
 			uid: this.getUID(),
-			provider: this,
+			provider: this
 		}
-
 	}
 
 	/**
