@@ -397,14 +397,16 @@ class MRRProvider extends RentalProvider {
 		if (success.success) {
 			returnObject = {
 				profileID: success.id,
-				poolid: pool,
+				id: pool,
 				success: true,
 				message: success.message
 			}
 		} else {
+			success.error = true
 			returnObject = success
 		}
-		return {success: returnObject, pool: {...poolParams, id: pool}}
+		return 
+		return {...returnObject, pool: {...poolParams, id: pool}}
 	}
 
 	/**
@@ -659,13 +661,14 @@ class MRRProvider extends RentalProvider {
 				rentalObject.paid = parseFloat(rentalConfirmation[rig].data.price.paid);
 				rentalObject.limit = rentalConfirmation[rig].data.hashrate.advertised.hash;
 				rentalObject.limitAdvertised = rentalConfirmation[rig].data.price_converted.advertised;
+				rentalObject.rentalId = rentalConfirmation[rig].data.id
 				rentalObject.id = rig
 				rentalObject.status = {status: NORMAL}
 				rentalObject.uid = this.getUID()
 				rentalObject.mrrData = rentalConfirmation[rig].data
 				rented_rigs.push(rentalObject)
 			} else {
-				rented_rigs.push({success: false, ...rentalConfirmation[rig], status: {status: ERROR}, rig})
+				rented_rigs.push({success: false, ...rentalConfirmation[rig], message: rentalConfirmation[rig].data.message, status: {status: ERROR}, rig})
 			}
 		}
 

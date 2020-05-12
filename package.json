@@ -42,7 +42,7 @@
     "lodash": "^4.17.15",
     "lodash.combinations": "^18.9.19",
     "market-rental-stats": "^4.0.0",
-    "miningrigrentals-api-v2": "^1.1.2",
+    "miningrigrentals-api-v2": "git+https://github.com/oipwg/miningrigrentals-api-v2.git",
     "moment": "^2.24.0",
     "nicehash-api": "git+https://github.com/bradicalone/nicehash-api.git",
     "node-localstorage": "^2.1.6",

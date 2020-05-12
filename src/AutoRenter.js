@@ -38,9 +38,9 @@ class AutoRenter {
         let pools = options.SpartanBot.returnPools('MiningRigRentals')
         if (pools.length === 0) {
             emitter.emit('message', JSON.stringify({
-              update: true,
-              message: `You have no pools, go back to setup and add your provider and finish adding a pool to continue.`,
-              autoRent: false
+                update: true,
+                message: "You have no pools, go back to setup and add your provider and finish adding a pool to continue.",
+                db: {autoRent: false}
             }));
             return {
               success: false,
@@ -269,17 +269,14 @@ class AutoRenter {
         const Percent = options.Xpercent / 100;
         const Margin = options.targetMargin / 100;
         const ProfitReinvestmentRate = options.profitReinvestment / 100;
-        console.log('NetworkhashrateFlo: ', NetworkhashrateFlo, 'MarketPriceMrrScrypt: ', MarketPriceMrrScrypt, 'Duration: ', Duration, 'Percent: ', Percent, 'PriceBtcUsd: ', PriceBtcUsd, 'Margin: ', Margin, 'ProfitReinvestmentRate: ', ProfitReinvestmentRate);
         let EstRentalBudgetPerCycleUSD = NetworkhashrateFlo * MarketPriceMrrScrypt * Duration * (-Percent / (-1 + Percent)) * PriceBtcUsd * (Margin * ProfitReinvestmentRate + 1);
-        console.log('EstRentalBudgetPerCycleUSD:', EstRentalBudgetPerCycleUSD);
-        let msg = {
+ 
+        let msg = JSON.stringify({
             update: true,
-            client: EstRentalBudgetPerCycleUSD.toFixed(2),
-            db: 'dailyBudget',
-            dailyBudget: EstRentalBudgetPerCycleUSD.toFixed(2)
-        };
+            db: {dailyBudget: EstRentalBudgetPerCycleUSD.toFixed(2)}
+        });
         
-        options.emitter.emit('rented', msg);
+        emitter.emit('message', msg);
     }
 
 	/**
@@ -366,7 +363,7 @@ class AutoRenter {
                     options.amount = newAmount;
                     let msg = JSON.stringify({
                         message: "Your current percent of ".concat(options.Xpercent, "% increased to ").concat((MinPercentFromMinAmount * 100.1).toFixed(2), "% ") + "in order to rent with NiceHash's min. Amount of 0.005",
-                        Xpercent: (MinPercentFromMinAmount * 100.1).toFixed(2)
+                        db: {Xpercent: (MinPercentFromMinAmount * 100.1).toFixed(2)}
                     });
                     emitter.emit('message', msg);
                 }
@@ -383,7 +380,7 @@ class AutoRenter {
                 let msg = JSON.stringify({
                     update: true,
                     message: "In order to mine with the given token of ".concat(options.Xpercent, " must increase your pecent to ").concat((MinPercentFromBittrexMinWithdrawal * 100.1).toFixed(2), "% , ") + "and try renting again.",
-                    autoRent: false
+                    db: {autoRent: false}
                 });
                 emitter.emit('message', msg);
                 return false;
@@ -395,10 +392,6 @@ class AutoRenter {
                 let niceHashPriceGHs = niceHash.marketPriceNhScryptBtcThSD / 1000;
 
                 if (MRR.marketPriceMrrScryptBtcThSD < niceHashPriceGHs) {
-                    let msg = JSON.stringify({
-                        info: "from MiningRigRentals"
-                    });
-                    emitter.emit('message', msg);
                     return 'MiningRigRentals';
                 } else {
                     return niceHashCalculation();
@@ -408,7 +401,7 @@ class AutoRenter {
             // If user only chooses one market to begin with return that market
             const market = MRR.success ? 'MiningRigRentals' : niceHashCalculation();
             emitter.emit('message', JSON.stringify({
-                market: market
+                message: 'Rental market '+market
             }));
             return market;
         } catch (e) {
@@ -501,15 +494,14 @@ class AutoRenter {
     // Gets hit from SpartanBot.js rent()
     async rent(options) {
         let inputOptions = options.options
-        console.log('options: AutoRenter.js 466')
 
         if (!this.rental_providers || this.rental_providers.length === 0) {
-            let msg = {
+            let msg = JSON.stringify({
                 update: false,
-                message: 'Rent Cancelled, no rental providers found to rent from.',
-                autoRent: false
-            };
-            inputOptions.emitter.emit('rented', msg);
+                autoRent: false,
+                message: 'Rent Cancelled, no rental providers found to rent from.'
+            });
+            inputOptions.emitter.emit('message', msg);
         }
 
         let preprocess;
@@ -550,12 +542,12 @@ class AutoRenter {
 
         for (let badge of badges) {
             let status = badge.status.status
-            console.log('BADGE PROVIDER AutoRenter.js line 606 ENDS HERE! CHANGE RETURN', badge)
+            console.log('BADGE PROVIDER AutoRenter.js line 553 ENDS HERE! CHANGE RETURN', badge)
             if (status === 'WARNING') {
                 if(badge.status.type === 'LOW_BALANCE') {
-                    return  emitter.emit('message', JSON.stringify({
+                    emitter.emit('message', JSON.stringify({
                             update: true,
-                            message: 'Warning: Low balance in your account'
+                            message: 'Warning: Low balance in your account.'
                     }));
                 }
             }
@@ -624,13 +616,16 @@ class AutoRenter {
         if (returnData.status === 'ERROR') {
             let msg = {
                 update: false,
+                autoRent: false,
                 message: returnData.message,
-                autoRent: false
+                badge: badges,
+                db: {dailyBudget: 0},
+                rigIds: []
             };
             inputOptions.emitter.emit('rented', msg);
 
         } else {
-            let getCostOfRental = (ids, transactions) => {
+            let getCostOfRental = (ids, transactions, rentalIds) => {
                 let ids_length = ids.length;
                 let transaction_length = transactions.length;
                 let amount = 0;
@@ -646,53 +641,47 @@ class AutoRenter {
                 }
                 
                 let msg = {
-                    update: true,
+                    update: false,
+                    autoRent: false,
+                    badge: badges,
+                    db: {
+                        dailyBudget: (inputOptions.EstRentalBudgetPerCycleUSD).toFixed(2), 
+                        CostOfRentalBtc: Math.abs(amount).toFixed(8)
+                    },
                     message: `Current cost of rental in BTC : ${Math.abs(amount).toFixed(8)}`,
-                    db: 'CostOfRentalBtc',
-                    CostOfRentalBtc: Math.abs(amount).toFixed(8)
+                    rigIds: ids,
+                    rentalId: rentalIds || ''
                 };
-                inputOptions.emitter.emit('rented', msg);
-                return msg
+                return inputOptions.emitter.emit('rented', msg);
             };
 
-      
-                try {
-                    let ids = [];
-                    let successCount = 0;
-                    let rentals = returnData.rentals;
-                    let length = rentals.length;
-                    console.log('length:', length);
+            try {
+                let ids = [];
+                let rentalIds = []
+                let successCount = 0;
+                let rentals = returnData.rentals;
+                let length = rentals.length;
 
-                    for (let i = 0; i < length; i++) {
-                        if (rentals[i].success === true) {
-                            successCount++;
-                            ids.push(rentals[i].id);
-                        }
+                for (let i = 0; i < length; i++) {
+                    if (rentals[i].success === true) {
+                        successCount++;
+                        rentalIds.push(rentals[i].rentalId)
+                        ids.push(rentals[i].id);
                     }
-
-                    let params = {
-                        start: 0,
-                        limit: successCount * 2
-                    };
-                    let res = await preprocess.badges[0].provider.getTransactions(params);
-                    let transactions = res.data.transactions;
-                    return getCostOfRental(ids, transactions);
-                } catch (e) {
-                    console.log('ERROR SETTIMEOUT: ', e);
                 }
-                setTimeout(async () => {
-                    console.log('SETTIME OUT RAN AFTER 20 MINUTES')
-                    let msg = {
-                        update: false,
-                        message: `Current cost of rental in BTC : TESTING 20 MINUTES`,
-                        db: 'CostOfRentalBtc',
-                        CostOfRentalBtc: 100000000
-                    };
-                    inputOptions.emitter.emit('rented', msg);
-                }, 20 * 60 * 1000);
-            
+
+                let params = {
+                    start: 0,
+                    limit: successCount * 2
+                };
+                let res = await preprocess.badges[0].provider.getTransactions(params);
+                let transactions = res.data.transactions;
+                return getCostOfRental(ids, transactions, rentalIds);
+            } catch (e) {
+                console.log('ERROR SETTIMEOUT: ', e);
+            }
         }
-        return returnData
+        return returnData;
     }
 
 	/**
