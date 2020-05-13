@@ -61,12 +61,23 @@ class AutoRenter {
         if (typeof id === 'undefined') id = pools[0].id
         try {
             let updatedPool = await options.SpartanBot.updatePool(id, {
-                user: walletAddress
-            })
-            return updatedPool
-        } catch (e) {
-            return { success: false, error: e }
-        }
+              user: walletAddress
+            });
+      
+            emitter.emit('message', JSON.stringify({
+                message: `Updated address ${walletAddress} for profile:  ${updatedPool[0].name} `
+            }))
+            return updatedPool;
+          } catch (e) {
+            console.log('e', e.message)
+              emitter.emit('message', JSON.stringify({
+                  message: e.message
+              }))
+            return {
+              success: false,
+              error: e
+            };
+          }
     }
 
 	/**
@@ -400,9 +411,6 @@ class AutoRenter {
 
             // If user only chooses one market to begin with return that market
             const market = MRR.success ? 'MiningRigRentals' : niceHashCalculation();
-            emitter.emit('message', JSON.stringify({
-                message: 'Rental market '+market
-            }));
             return market;
         } catch (e) {
             console.log('compareMarkets function error : ', e);
@@ -421,7 +429,9 @@ class AutoRenter {
     // Gets hit from within rent() in AutoRenter.js below
     async rentPreprocess(options) {
         let market = await this.compareMarkets(options)
-
+        emitter.emit('message', JSON.stringify({
+            message: 'Rental market ' + market
+          }));
         if (market === false) {
             return {
               status: ERROR,
@@ -613,17 +623,24 @@ class AutoRenter {
             type: RECEIPT
         };
         console.log('AUTORENTER.JS line 665 returnData:', returnData)
-        if (returnData.status === 'ERROR') {
+        if(returnData.rentals.length === 0){
+            ErrorMsg = returnData.message
+          } else {
+            ErrorMsg = returnData.rentals[0].message
+          }
+          if (returnData.status === 'ERROR') {
             let msg = {
-                update: false,
-                autoRent: false,
-                message: returnData.message,
-                badge: badges,
-                db: {dailyBudget: 0},
-                rigIds: []
+              update: false,
+              autoRent: false,
+              message: ErrorMsg,
+              badge: badges,
+              db: {
+                CostOfRentalBtc: Math.abs(0.0009876).toFixed(8)
+              },
+              rentalId: []
             };
             inputOptions.emitter.emit('rented', msg);
-
+            return;
         } else {
             let getCostOfRental = (ids, transactions, rentalIds) => {
                 let ids_length = ids.length;
@@ -645,14 +662,14 @@ class AutoRenter {
                     autoRent: false,
                     badge: badges,
                     db: {
-                        dailyBudget: (inputOptions.EstRentalBudgetPerCycleUSD).toFixed(2), 
-                        CostOfRentalBtc: Math.abs(amount).toFixed(8)
+                      CostOfRentalBtc: Math.abs(amount).toFixed(8)
                     },
-                    message: `Current cost of rental in BTC : ${Math.abs(amount).toFixed(8)}`,
+                    message: "Current cost of rental in BTC : ".concat(Math.abs(amount).toFixed(8)),
                     rigIds: ids,
                     rentalId: rentalIds || ''
-                };
-                return inputOptions.emitter.emit('rented', msg);
+                  };
+                  inputOptions.emitter.emit('rented', msg);
+                  return
             };
 
             try {

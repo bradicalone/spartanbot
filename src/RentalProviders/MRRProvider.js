@@ -451,6 +451,14 @@ class MRRProvider extends RentalProvider {
 	}
 
 	/**
+	 * Withdraw, Deposit addresses, settings, notifications, username, email
+	 *
+	 */
+	async getAccount() {
+		return await this.api.getAccount();
+	  }
+
+	/**
 	 * Set a pool to active
 	 * pool profile id
 	 */
