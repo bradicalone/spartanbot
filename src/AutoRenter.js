@@ -623,6 +623,7 @@ class AutoRenter {
             type: RECEIPT
         };
         console.log('AUTORENTER.JS line 665 returnData:', returnData)
+        let ErrorMsg;
         if(returnData.rentals.length === 0){
             ErrorMsg = returnData.message
           } else {
