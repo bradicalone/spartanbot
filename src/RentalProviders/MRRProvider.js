@@ -389,6 +389,8 @@ class MRRProvider extends RentalProvider {
 			let response = await this.api.addPoolToProfile(addPoolToProfileOptions)
 			if (response.success) {
 				success = response.data
+			} else {
+				success = response
 			}
 		} catch (err) {
 			throw new Error(`Failed to add pool: ${pool} to profile: ${poolProfile} \n ${err}`)
@@ -396,17 +398,17 @@ class MRRProvider extends RentalProvider {
 		let returnObject
 		if (success.success) {
 			returnObject = {
-				profileID: success.id,
-				id: pool,
-				success: true,
-				message: success.message
-			}
-		} else {
+			  profileID: success.id,
+			  poolid: pool,
+			  success: true,
+			  message: success.message
+			};
+		  } else {
 			success.error = true
-			returnObject = success
-		}
-		return 
-		return {...returnObject, pool: {...poolParams, id: pool}}
+			returnObject = success;
+		  }
+		
+		  return {...returnObject, pool: {...poolParams, id: pool}}
 	}
 
 	/**
