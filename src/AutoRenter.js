@@ -660,7 +660,7 @@ class AutoRenter {
                 
                 let msg = {
                     update: false,
-                    autoRent: false,
+                    autoRent: true,
                     badge: badges,
                     db: {
                       CostOfRentalBtc: Math.abs(amount).toFixed(8)
