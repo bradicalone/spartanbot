@@ -836,6 +836,21 @@ class SpartanBot {
 	returnReceipts() {
 		return this.receipts
 	}
+	
+
+	clearStorage() {
+		console.log(this)
+		this.rental_providers = []
+		this.rental_strategies = {}
+
+		this.pools = []
+		this.poolProfiles = []
+		this.receipts = []
+		let serialized = {"rental_providers":[],"rental_strategies":{},"settings":{},"pools":[],"poolProfiles":[],"receipts":[]}
+	
+		if (!this.settings.memory) localStorage.setItem('spartanbot-storage', JSON.stringify(serialized));
+			return true
+	  }
 
 	/**
 	 * Serialize all information about SpartanBot to LocalStorage (save the current state)
@@ -877,10 +892,6 @@ class SpartanBot {
 
 		if (data_from_storage.settings)
 			this.settings = {...data_from_storage.settings, ...this.settings}
-
-		// if (data_from_storage.oip_account){
-		// 	this.oip_account = data_from_storage.oip_account
-		// }
 
 		if (data_from_storage.pools){
 			this.pools = data_from_storage.pools
