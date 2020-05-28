@@ -17,6 +17,17 @@ wss.on('connection', (ws) => {
     })
 });
 
+ // Formated Date prototype
+ const timestamp = () => {
+    let date = new Date()
+    return date.getFullYear() + "-" +
+       (date.getMonth() + 1) + "-" +
+       date.getDate() + " " +
+       date.getHours() + ":" +
+       date.getMinutes() + ":" +
+       date.getSeconds()
+}   
+
 /**
  * Manages Rentals of Miners from multiple API's
  */
@@ -622,7 +633,7 @@ class AutoRenter {
             rentals,
             type: RECEIPT
         };
-        console.log('AUTORENTER.JS line 665 returnData:', returnData)
+        console.log(timestamp(), ' AutoRenter.js line-698 returnData:', returnData);
         let ErrorMsg;
         if(returnData.rentals.length === 0){
             ErrorMsg = returnData.message
