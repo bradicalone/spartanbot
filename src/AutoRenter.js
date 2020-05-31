@@ -46,7 +46,7 @@ class AutoRenter {
     async updatePoolAddress(options) {
         let id;
         let walletAddress = options.address
-        let pools = options.SpartanBot.returnPools('MiningRigRentals')
+        let pools = options.SpartanBot.returnPools(options.providerType)
         if (pools.length === 0) {
             emitter.emit('message', JSON.stringify({
                 update: true,
@@ -72,7 +72,9 @@ class AutoRenter {
         if (typeof id === 'undefined') id = pools[0].id
         try {
             let updatedPool = await options.SpartanBot.updatePool(id, {
-              user: walletAddress
+                user: walletAddress,
+                providerType: options.providerType,
+                id: id
             });
       
             emitter.emit('message', JSON.stringify({
@@ -80,7 +82,7 @@ class AutoRenter {
             }))
             return updatedPool;
           } catch (e) {
-            console.log('e', e.message)
+            console.log('Error', e.message)
               emitter.emit('message', JSON.stringify({
                   message: e.message
               }))
@@ -111,6 +113,7 @@ class AutoRenter {
             if (provider.getInternalType() === "MiningRigRentals") {
                 _provider = provider;
                 mrr_providers.push(provider);
+                options.providerType = "MiningRigRentals"
             }
         }
 
@@ -175,9 +178,6 @@ class AutoRenter {
         let hashratePerc = options.hashrate * .10
         let hashrateMin = options.hashrate - hashratePerc
 
-        // console.log("total hashpower: ", hashpower_found)
-        // console.log("total cost: ", cost_found)
-
         // ToDo: Consider not splitting the work up evenly and fill each to his balance first come first serve
         //load up work equally between providers. 1 and 1 and 1 and 1, etc
         let iterator = 0; //iterator is the index of the provider while, 'i' is the index of the rigs
@@ -232,11 +232,10 @@ class AutoRenter {
             }
 
             let price = 0,
-                //   limit = 0,
-                selectedRigsTHs = 0,
-                last10AvgCostMrrScrypt = 0,
-                selectedRigsRentalCost = 0,
-                duration = options.duration;
+            selectedRigsTHs = 0,
+            last10AvgCostMrrScrypt = 0,
+            selectedRigsRentalCost = 0,
+            duration = options.duration;
             last10AvgCostMrrScrypt += p.provider.getRentalCost(p.rigs_to_rent); // amount
             selectedRigsTHs += p.provider.getTotalHashPower(p.rigs_to_rent) / 1000 / 1000; // limit
             price = toNiceHashPrice(last10AvgCostMrrScrypt, selectedRigsTHs, duration)
@@ -442,7 +441,7 @@ class AutoRenter {
         let market = await this.compareMarkets(options)
         emitter.emit('message', JSON.stringify({
             message: 'Rental market ' + market
-          }));
+        }));
         if (market === false) {
             return {
               status: ERROR,
@@ -453,9 +452,9 @@ class AutoRenter {
         let nhProviders = [];
 
         for (let provider of this.rental_providers) {
-
-            console.log('provider.getInternalType():', provider.getInternalType())
             if (provider.getInternalType() === NiceHash && market === NiceHash) {
+                options.providerType = NiceHash
+                await this.updatePoolAddress(options);
                 nhProviders.push(provider);
             }
 
@@ -483,7 +482,6 @@ class AutoRenter {
         }
 
         for (let prov of nhProviders) {
-            //   badges.push((await prov.preprocessRent(options.hashrate, options.duration))); // Hits NiceHashProvider.js preprocessRent()
             badges.push((await prov.preprocessRent(options))); // Hits NiceHashProvider.js preprocessRent()
         }
 

@@ -597,26 +597,32 @@ class SpartanBot {
 	 * @param {string} [options.user] - Your workname
 	 * @param {string} [options.pass] - Worker password
 	 * @param {string} [options.notes] - Additional notes to help identify the pool for you
+	 * @param {string} [options.providerType] - Which rental provider address should be updated
 	 * @async
 	 * @returns {Promise<Array.<Object>>}
 	 */
 	async updatePool(id, options) {
-		let updatedPools = []
+		let updatedPools = [];
+		let res;
 		for (let provider of this.getRentalProviders()) {
-			let res;
+	
+		  if (provider.name === options.providerType) {
 			try {
-				res = await provider.updatePool(id, options)
+			  res = await provider.updatePool(id, options);
 			} catch (err) {
-				throw new Error(`Failed to update pool on RentalProvider.js: ${err}`)
+			  console.log('Failed to update pool on RentalProvider.js:', err)
+			  throw new Error("Failed to update pool on RentalProvider.js: ".concat(err));
 			}
-			let tmpObj = {}
-			tmpObj.name = provider.getName()
-			tmpObj.providerUID = provider.getUID()
-			tmpObj.message = res.data ? res.data : res
-			updatedPools.push(tmpObj)
+			let tmpObj = {};
+			tmpObj.name = provider.getName();
+			tmpObj.providerUID = provider.getUID();
+			tmpObj.message = res.data ? res.data : res;
+			updatedPools.push(tmpObj);
+		  }
 		}
-		return updatedPools
-	}
+		
+		return updatedPools;
+	  }
 
 	/**
 	 * Set pools to the spartanbot local variable

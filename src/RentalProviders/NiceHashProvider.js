@@ -128,28 +128,38 @@ class NiceHashProvider extends RentalProvider {
 	 * @async
 	 * @returns {Promise<Object>}
 	 */
-	async _updatePool(id, options) {
+	async updatePool(id, options) {
 		for (let pool of this.pools) {
-			if (pool.id === id || pool.mrrID === id) {
-				for (let opt in pool) {
-					for (let _opt in options) {
-						if (_opt === 'host' && opt === 'pool_host')
-							pool[opt] = options[_opt]
-						if (_opt === 'port' && opt === 'pool_port')
-							pool[opt] = options[_opt]
-						if (_opt === 'user' && opt === 'pool_user')
-							pool[opt] = options[_opt]
-						if (_opt === 'pass' && opt === 'pool_pass')
-							pool[opt] = options[_opt]
-						if (_opt === 'type' && opt === 'algo')
-							pool[opt] = options[_opt]
-						if (opt === _opt) {
-							pool[opt] = options[_opt]
-						}
-					}
+			if (pool.id === id ) {
+				for (let opt in pool) {          
+          switch(opt) {
+            case 'algorithm':
+              options.type = options.type || pool[opt]
+              break
+            case 'name':
+              options.name = options.name || pool[opt]
+              break;
+            case 'stratumHostname':
+              options.host = options.host || pool[opt]
+              break;
+            case 'stratumPort':
+              options.port = options.port || pool[opt]
+              break;
+            case 'username':
+              options.user = options.user || pool[opt]
+              break;
+            case 'password':
+              options.pass = options.pass || pool[opt]
+              break;
+            case 'notes': 
+              options.notes = options.notes || ''
+              break;
+          }
 				}
-			}
-		}
+      }
+    }
+    const res =  await this.api.createOrEditPool(options)
+    console.log('res:', res)
 		return {success: true, data: {id, success: true, message: 'Updated'}}
 	}
 
