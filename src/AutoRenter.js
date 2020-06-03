@@ -280,26 +280,6 @@ class AutoRenter {
         }
     }
 
-    async updateDailyBudget(options, MarketPrice) {
-        let priceUSD = await options.PriceBtcUsd();
-        const PriceBtcUsd = priceUSD.data.rates.USD;
-        const NetworkhashrateFlo = options.NetworkHashRate;
-        const MarketPriceMrrScrypt = MarketPrice * 1000 / 24; // convert to TH/s devided by 24 => 1000/24
-
-        const Duration = options.duration;
-        const Percent = options.Xpercent / 100;
-        const Margin = options.targetMargin / 100;
-        const ProfitReinvestmentRate = options.profitReinvestment / 100;
-        let EstRentalBudgetPerCycleUSD = NetworkhashrateFlo * MarketPriceMrrScrypt * Duration * (-Percent / (-1 + Percent)) * PriceBtcUsd * (Margin * ProfitReinvestmentRate + 1);
- 
-        let msg = JSON.stringify({
-            update: true,
-            db: {dailyBudget: EstRentalBudgetPerCycleUSD.toFixed(2)}
-        });
-        
-        emitter.emit('message', msg);
-    }
-
 	/**
      * Compare MiningRigRentals and NiceHash market to find which market to rent with
      * @param {Object} options - The Options for the rental operation
@@ -336,17 +316,12 @@ class AutoRenter {
 
         try {
             for (let provider of this.rental_providers) {
-                console.log('provider.getInternalType()', provider.getInternalType());
-
                 if (provider.getInternalType() === MiningRigRentals) {
                     // Switch hashrate to MH/s due to MRR accepts it that way
                     // let hashrate = options.hashrate * 1000000
                     let response = await provider.getAlgo('scrypt', 'BTC');
-                    console.log('response: autorenter.js 281', response); // Returns amount in GH/s
-
                     MRR.success = true;
                     MRR.marketPriceMrrScryptBtcThSD = response.data.suggested_price.amount;
-                    this.updateDailyBudget(options, MRR.marketPriceMrrScryptBtcThSD)
                 }
 
                 if (provider.getInternalType() === NiceHash) {
@@ -389,7 +364,7 @@ class AutoRenter {
                     emitter.emit('message', msg);
                 }
 
-                console.log('Amount: autorent.js line 353', options.amount);
+                console.log('Amount: autorent.js line 367', options.amount);
                 return 'NiceHash';
             };
 
