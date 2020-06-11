@@ -159,7 +159,6 @@ class NiceHashProvider extends RentalProvider {
       }
     }
     const res =  await this.api.createOrEditPool(options)
-    console.log('res:', res)
 		return {success: true, data: {id, success: true, message: 'Updated'}}
 	}
 
