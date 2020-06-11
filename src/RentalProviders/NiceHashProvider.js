@@ -282,20 +282,20 @@ class NiceHashProvider extends RentalProvider {
 		return {
 			market: "NiceHash",
 			status,
-			amount: options.amount,
-			totalHashesTH: options.limit * 60 * 60 * options.duration,
+			totalHashesTH: options.limit,
 			duration: options.duration,
+			amount: options.amount,
 			limit: options.limit.toFixed(2),
 			price: options.price,
 			balance,
 			query: {
-				hashrate_found: options.limit,
-				cost_found: options.amount,
-				duration: options.duration
+			  hashrate_found: options.limit,
+			  cost_found: options.amount,
+			  duration: options.duration
 			},
 			uid: this.getUID(),
 			provider: this
-		}
+		  };
 	}
 
 	/**
@@ -404,6 +404,14 @@ class NiceHashProvider extends RentalProvider {
 		} else {
 			return {success: true, data: res, id}
 		}
+	}
+
+	async getDepositAddresses(currency) {
+		return await this.api.getDepositAddresses(currency)
+	}
+
+  async getWithdrawalAddresses(currency) {
+		return await this.api.getWithdrawalAddresses(currency)
 	}
 }
 

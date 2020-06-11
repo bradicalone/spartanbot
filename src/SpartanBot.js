@@ -262,8 +262,6 @@ class SpartanBot {
 			throw new Error("Unable to check Provider Authorization!\n" + e)
 		}
 
-		this.rental_providers.push(new_provider)
-
 		if (settings.activePool) {
 			new_provider.setActivePool(settings.activePool)
 		}
@@ -281,7 +279,7 @@ class SpartanBot {
 			process.env.MRR_API_KEY = settings.api_key || settings.key
 			process.env.MRR_API_SECRET = settings.api_secret || settings.id
 
-			let profiles = [];
+			let profiles;
 			try {
 				let res = await new_provider.getPoolProfiles()
 				if (res.success) {
@@ -334,7 +332,7 @@ class SpartanBot {
             }
             new_provider.setPools(pools);
 		}
-
+		this.rental_providers.push(new_provider)
 		// Save new Provider
 		this.serialize()
 
@@ -347,7 +345,8 @@ class SpartanBot {
 			uid: new_provider.uid,
 			pools,
 			poolProfiles,
-			provider: new_provider
+			provider: new_provider,
+			spartanbot: this
 		}
 	}
 
@@ -845,13 +844,12 @@ class SpartanBot {
 	
 
 	clearStorage() {
-		console.log(this)
 		this.rental_providers = []
 		this.rental_strategies = {}
-
 		this.pools = []
 		this.poolProfiles = []
 		this.receipts = []
+		this.emitter = new EventEmitter()
 		let serialized = {"rental_providers":[],"rental_strategies":{},"settings":{},"pools":[],"poolProfiles":[],"receipts":[]}
 	
 		if (!this.settings.memory) localStorage.setItem('spartanbot-storage', JSON.stringify(serialized));

@@ -328,6 +328,11 @@ class AutoRenter {
                     let orderBook = await provider.getOrderBook();
                     let orders = orderBook.stats.USA.orders;
                     let length = orders.length;
+                    if (!length){
+                        niceHash.success = true;
+                        niceHash.marketPriceNhScryptBtcThSD = lowestPrice;
+                        return
+                    }
                     let lowestPrice = orders[0].price;
 
                     for (let i = 0; i < length; i++) {
@@ -545,6 +550,12 @@ class AutoRenter {
                     }));
                 }
             }
+            if (badge.status.type === 'CUTOFF') {
+                emitter.emit('message', JSON.stringify({
+                    update: true,
+                    message: badge.status.message
+                }));
+            }
             //Rent
             let rentalReturn = await badge.provider.rent(badge); //RentalProvider.js rent()
 
@@ -607,81 +618,130 @@ class AutoRenter {
             type: RECEIPT
         };
         console.log(timestamp(), ' AutoRenter.js line-698 returnData:', returnData);
+
         let ErrorMsg;
         if(returnData.rentals.length === 0){
             ErrorMsg = returnData.message
           } else {
             ErrorMsg = returnData.rentals[0].message
           }
+
           if (returnData.status === 'ERROR') {
-            let msg = {
-              update: false,
-              autoRent: false,
-              message: ErrorMsg,
-              badge: badges,
-              db: {
-                CostOfRentalBtc: Math.abs(0.0009876).toFixed(8)
-              },
-              rentalId: []
-            };
-            inputOptions.emitter.emit('rented', msg);
-            return;
+            if(badges[0].market === MiningRigRentals) {
+                let msg = {
+                    update: false,
+                    autoRent: false,
+                    message: `SelectedRigsTHs :  ${badges[0].selectedRigsTHs.toFixed(8)} \n`+
+                    `Current balance: ${badges[0].balance}  BTC \n`+
+                    `${ErrorMsg}`,
+                    badge: badges,
+                    db: {
+                        CostOfRentalBtc: Math.abs(0.0009876).toFixed(8)
+                    },
+                    rentalId: []
+                };
+                inputOptions.emitter.emit('rented', msg);
+                return;
+            }
+            if(badges[0].market === NiceHash) {
+                console.log('(badges[0].status.cost).toFixed(8)', typeof badges[0].status.cost)
+                console.log('(badges[0].status.cost).toFixed(8)', Number(badges[0].status.cost).toFixed(8))
+                let msg = {
+                    update: false,
+                    autoRent: false,
+                    message: `Cost found BTC:  ${Number(badges[0].status.cost).toFixed(8)} \n`+
+                    `TotalHashesTH: ${Number(badges[0].totalHashesTH).toFixed(8)} \n`+
+                    `Current balance: ${badges[0].balance} \n`+
+                    `Duration: ${badges[0].duration} hours. \n`+
+                    `${ErrorMsg} .`,
+                    badge: badges,
+                    db: {
+                        CostOfRentalBtc: Number(badges[0].status.cost).toFixed(8)
+                    },
+                    rentalId: []
+                };
+                inputOptions.emitter.emit('rented', msg);
+                return;
+            }
         } else {
-            let getCostOfRental = (ids, transactions, rentalIds) => {
-                let ids_length = ids.length;
-                let transaction_length = transactions.length;
-                let amount = 0;
-
-                for (let i = 0; i < ids_length; i++) {
-                    let id = ids[i];
-
-                    for (let j = 0; j < transaction_length; j++) {
-                        if (id === transactions[j].rig) {
-                            amount += Number(transactions[j].amount);
+            if(returnData.rentals[0].market === MiningRigRentals) {
+                console.log('returnData.rentals[0].market', returnData.rentals[0].market)
+                let getCostOfRental = (ids, transactions, rentalIds) => {
+                    let ids_length = ids.length;
+                    let transaction_length = transactions.length;
+                    let amount = 0;
+    
+                    for (let i = 0; i < ids_length; i++) {
+                        let id = ids[i];
+    
+                        for (let j = 0; j < transaction_length; j++) {
+                            if (id === transactions[j].rig) {
+                                amount += Number(transactions[j].amount);
+                            }
                         }
                     }
+    
+                    let msg = {
+                        update: false,
+                        autoRent: true,
+                        badge: badges,
+                        db: {
+                            CostOfRentalBtc: Math.abs(amount).toFixed(8)
+                        },
+                        message: `Current cost of rental in BTC :  ${Math.abs(amount).toFixed(8)} \n`+
+                        `SelectedRigsTHs :  ${badges[0].selectedRigsTHs.toFixed(8)} \n`+
+                        `Current balance: ${badges[0].balance} BTC`,
+                        rigIds: ids,
+                        rentalId: rentalIds || ''
+                    };
+                    inputOptions.emitter.emit('rented', msg);
+                    return;
+                };
+    
+                try {
+                    let ids = [];
+                    let rentalIds = [];
+                    let successCount = 0;
+                    let rentals = returnData.rentals;
+                    let length = rentals.length;
+    
+                    for (let i = 0; i < length; i++) {
+                        if (rentals[i].success === true) {
+                            successCount++;
+                            rentalIds.push(rentals[i].rentalId);
+                            ids.push(rentals[i].id);
+                        }
+                    }
+    
+                    let params = {
+                        start: 0,
+                        limit: successCount * 2
+                    };
+                    let res = await preprocess.badges[0].provider.getTransactions(params);
+                    let transactions = res.data.transactions;
+                    return getCostOfRental(ids, transactions, rentalIds);
+                } catch (e) {
+                    console.log('ERROR SETTIMEOUT: ', e);
                 }
-                
+            }
+            if(returnData.rentals[0].market === NiceHash) {
+                console.log('returnData.rentals[0].status', returnData.rentals[0].status)
+                console.log('returnData.rentals[0].res', returnData.rentals[0].res)
                 let msg = {
                     update: false,
                     autoRent: true,
                     badge: badges,
                     db: {
-                      CostOfRentalBtc: Math.abs(amount).toFixed(8)
+                        CostOfRentalBtc: Number(returnData.rentals[0].status.cost).toFixed(8)
                     },
-                    message: "Current cost of rental in BTC : ".concat(Math.abs(amount).toFixed(8)),
-                    rigIds: ids,
-                    rentalId: rentalIds || ''
-                  };
-                  inputOptions.emitter.emit('rented', msg);
-                  return
-            };
-
-            try {
-                let ids = [];
-                let rentalIds = []
-                let successCount = 0;
-                let rentals = returnData.rentals;
-                let length = rentals.length;
-
-                for (let i = 0; i < length; i++) {
-                    if (rentals[i].success === true) {
-                        successCount++;
-                        rentalIds.push(rentals[i].rentalId)
-                        ids.push(rentals[i].id);
-                    }
-                }
-
-                let params = {
-                    start: 0,
-                    limit: successCount * 2
+                    message: `Current cost of rental in BTC :  ${Number(returnData.rentals[0].status.cost).toFixed(8)} \n`+
+                    `TotalHashesTH: ${Number(badges[0].totalHashesTH).toFixed(8)} \n`+
+                    `Available balance BTC: ${returnData.rentals[0].res.availableAmount}`
                 };
-                let res = await preprocess.badges[0].provider.getTransactions(params);
-                let transactions = res.data.transactions;
-                return getCostOfRental(ids, transactions, rentalIds);
-            } catch (e) {
-                console.log('ERROR SETTIMEOUT: ', e);
+                inputOptions.emitter.emit('rented', msg);
+                return;
             }
+           
         }
         return returnData;
     }
