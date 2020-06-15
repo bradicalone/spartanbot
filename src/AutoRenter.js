@@ -1,7 +1,5 @@
 import Exchange from '@oipwg/exchange-rate';
 import uid from 'uid'
-const events = require('events');
-const emitter = new events()
 
 
 const NiceHash = "NiceHash"
@@ -9,13 +7,6 @@ const MiningRigRentals = "MiningRigRentals"
 
 import { toNiceHashPrice } from "./util";
 import { ERROR, NORMAL, WARNING, LOW_BALANCE, LOW_HASHRATE, CUTOFF, RECEIPT } from "./constants";
-const wss = require(process.cwd() + '/backend/routes/socket').wss;
-
-wss.on('connection', (ws) => {
-    emitter.on('message', (msg) => {
-        ws.send(msg)
-    })
-});
 
  // Formated Date prototype
  const timestamp = () => {
@@ -48,7 +39,7 @@ class AutoRenter {
         let walletAddress = options.address
         let pools = options.SpartanBot.returnPools(options.providerType)
         if (pools.length === 0) {
-            emitter.emit('message', JSON.stringify({
+            options.emitter.emit('message', JSON.stringify({
                 update: true,
                 message: "You have no pools, go back to setup and add your provider and finish adding a pool to continue.",
                 db: {autoRent: false}
@@ -77,13 +68,13 @@ class AutoRenter {
                 id: id
             });
       
-            emitter.emit('message', JSON.stringify({
+            options.emit('message', JSON.stringify({
                 message: `Updated address ${walletAddress} for profile:  ${updatedPool[0].name} `
             }))
             return updatedPool;
           } catch (e) {
             console.log('Error', e.message)
-              emitter.emit('message', JSON.stringify({
+              options.emitter.emit('message', JSON.stringify({
                   message: e.message
               }))
             return {
@@ -366,7 +357,7 @@ class AutoRenter {
                         message: "Your current percent of ".concat(options.Xpercent, "% increased to ").concat((MinPercentFromMinAmount * 100.1).toFixed(2), "% ") + "in order to rent with NiceHash's min. Amount of 0.005",
                         db: {Xpercent: (MinPercentFromMinAmount * 100.1).toFixed(2)}
                     });
-                    emitter.emit('message', msg);
+                    options.emitter.emit('message', msg);
                 }
 
                 console.log('Amount: autorent.js line 367', options.amount);
@@ -383,7 +374,7 @@ class AutoRenter {
                     message: "In order to mine with the given token of ".concat(options.Xpercent, " must increase your pecent to ").concat((MinPercentFromBittrexMinWithdrawal * 100.1).toFixed(2), "% , ") + "and try renting again.",
                     db: {autoRent: false}
                 });
-                emitter.emit('message', msg);
+                options.emitter.emit('message', msg);
                 return false;
             } 
 
@@ -419,7 +410,7 @@ class AutoRenter {
     // Gets hit from within rent() in AutoRenter.js below
     async rentPreprocess(options) {
         let market = await this.compareMarkets(options)
-        emitter.emit('message', JSON.stringify({
+        options.emitter.emit('message', JSON.stringify({
             message: 'Rental market ' + market
         }));
         if (market === false) {
@@ -541,17 +532,17 @@ class AutoRenter {
 
         for (let badge of badges) {
             let status = badge.status.status
-            console.log('BADGE PROVIDER AutoRenter.js line 553 ENDS HERE! CHANGE RETURN', badge)
+            console.log('BADGE PROVIDER AutoRenter.js line 553 ENDS HERE! CHANGE RETURN', badge.status)
             if (status === 'WARNING') {
                 if(badge.status.type === 'LOW_BALANCE') {
-                    emitter.emit('message', JSON.stringify({
+                    inputOptions.emitter.emit('message', JSON.stringify({
                             update: true,
                             message: 'Warning: Low balance in your account.'
                     }));
                 }
             }
             if (badge.status.type === 'CUTOFF') {
-                emitter.emit('message', JSON.stringify({
+                inputOptions.emitter.emit('message', JSON.stringify({
                     update: true,
                     message: badge.status.message
                 }));
@@ -635,6 +626,7 @@ class AutoRenter {
                     `Current balance: ${badges[0].balance}  BTC \n`+
                     `${ErrorMsg}`,
                     badge: badges,
+                    emitter: inputOptions.emitter,
                     db: {
                         CostOfRentalBtc: Math.abs(0.0009876).toFixed(8)
                     },
@@ -644,8 +636,6 @@ class AutoRenter {
                 return;
             }
             if(badges[0].market === NiceHash) {
-                console.log('(badges[0].status.cost).toFixed(8)', typeof badges[0].status.cost)
-                console.log('(badges[0].status.cost).toFixed(8)', Number(badges[0].status.cost).toFixed(8))
                 let msg = {
                     update: false,
                     autoRent: false,
@@ -655,6 +645,7 @@ class AutoRenter {
                     `Duration: ${badges[0].duration} hours. \n`+
                     `${ErrorMsg} .`,
                     badge: badges,
+                    emitter: inputOptions.emitter,
                     db: {
                         CostOfRentalBtc: Number(badges[0].status.cost).toFixed(8)
                     },
@@ -685,6 +676,7 @@ class AutoRenter {
                         update: false,
                         autoRent: true,
                         badge: badges,
+                        emitter: inputOptions.emitter,
                         db: {
                             CostOfRentalBtc: Math.abs(amount).toFixed(8)
                         },
@@ -725,12 +717,11 @@ class AutoRenter {
                 }
             }
             if(returnData.rentals[0].market === NiceHash) {
-                console.log('returnData.rentals[0].status', returnData.rentals[0].status)
-                console.log('returnData.rentals[0].res', returnData.rentals[0].res)
                 let msg = {
                     update: false,
                     autoRent: true,
                     badge: badges,
+                    emitter: inputOptions.emitter,
                     db: {
                         CostOfRentalBtc: Number(returnData.rentals[0].status.cost).toFixed(8)
                     },
