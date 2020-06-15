@@ -352,22 +352,24 @@ class NiceHashProvider extends RentalProvider {
 
 		let res;
 		try {
-			// res = await this.api.createOrder(rentOptions)
+			res = await this.api.createOrder(rentOptions)
 		} catch (err) {
 			return {success: false, message: `Failed to create NiceHash order`, error: err, status: ERROR}
 		}
-		let id, success = true
-		if (res.result && res.result.success) {
-			let orderSuccess = res.result.success
-			let split = orderSuccess.split(' ')
-			let order = split[1]
-			id = order.substr(1)
+		
+		let rentalId;
+		let success;
+	
+		if (res.status.code === "ACTIVE" || res.status.code === "COMPLETED" ) {
+		  success = true;
+		  rentalId = res.id;
 		} else {
-			success = false
+		  success = false;
 		}
 
 		return {
 			market: "NiceHash",
+			CostOfRentalBtc: res.payedAmount,
 			success,
 			amount: options.amount,
 			limit: options.limit,
@@ -375,10 +377,10 @@ class NiceHashProvider extends RentalProvider {
 			duration: options.duration,
 			status: options.status,
 			res,
-			id,
+			rentalId,
 			cutoff: options.cutoff,
 			uid: this.getUID()
-		}
+		  };
 	}
 
 	/**
