@@ -77,8 +77,7 @@ class NiceHashProvider extends RentalProvider {
 			}
 		}
 		let pool = {...options, market: this.getInternalType(), providerUID: this.getUID()};
-		this._addPools(pool)
-		this._setActivePool(pool.id)
+		
 		try {
 			let res = await this.api.createOrEditPool(options);
 			if (res.success) {
@@ -90,6 +89,8 @@ class NiceHashProvider extends RentalProvider {
 		} catch (err) {
 			  throw new Error("Failed to create pool: ".concat(err));
 		}
+		this._addPools(pool)
+		this._setActivePool(pool.id)
 		return pool;
 	}
 
@@ -356,7 +357,7 @@ class NiceHashProvider extends RentalProvider {
 		} catch (err) {
 			return {success: false, message: `Failed to create NiceHash order`, error: err, status: ERROR}
 		}
-		
+
 		let rentalId;
 		let success;
 	

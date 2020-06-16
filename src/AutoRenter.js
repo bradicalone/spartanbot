@@ -68,7 +68,7 @@ class AutoRenter {
                 id: id
             });
       
-            options.emit('message', JSON.stringify({
+            options.emitter.emit('message', JSON.stringify({
                 message: `Updated address ${walletAddress} for profile:  ${updatedPool[0].name} `
             }))
             return updatedPool;

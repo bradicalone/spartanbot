@@ -662,7 +662,7 @@ class MRRProvider extends RentalProvider {
 
 		for (let rig in rentalConfirmation){
 			if (rentalConfirmation[rig] === undefined){
-				rented_rigs.push({success: false, message: `Error in API`, error: `Error in API`, status: ERROR})
+				rented_rigs.push({success: false, market: "MiningRigRentals", message: `Error in API`, error: `Error in API`, status: ERROR})
 				break;
 			} else if (rentalConfirmation[rig].success){
 				let rentalObject = {}
@@ -678,7 +678,7 @@ class MRRProvider extends RentalProvider {
 				rentalObject.mrrData = rentalConfirmation[rig].data
 				rented_rigs.push(rentalObject)
 			} else {
-				rented_rigs.push({success: false, ...rentalConfirmation[rig], message: rentalConfirmation[rig].data.message, status: {status: ERROR}, rig})
+				rented_rigs.push({success: false, market: "MiningRigRentals", ...rentalConfirmation[rig], message: rentalConfirmation[rig].data.message, status: {status: ERROR}, rig})
 			}
 		}
 
