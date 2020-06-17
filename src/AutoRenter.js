@@ -40,6 +40,7 @@ class AutoRenter {
         let pools = options.SpartanBot.returnPools(options.providerType)
         if (pools.length === 0) {
             options.emitter.emit('message', JSON.stringify({
+                userId: options.userId,
                 update: true,
                 message: "You have no pools, go back to setup and add your provider and finish adding a pool to continue.",
                 db: {autoRent: false}
@@ -69,12 +70,14 @@ class AutoRenter {
             });
       
             options.emitter.emit('message', JSON.stringify({
+                userId: options.userId,
                 message: `Updated address ${walletAddress} for profile:  ${updatedPool[0].name} `
             }))
             return updatedPool;
           } catch (e) {
             console.log('Error', e.message)
               options.emitter.emit('message', JSON.stringify({
+                userId: options.userId,
                   message: e.message
               }))
             return {
@@ -354,6 +357,7 @@ class AutoRenter {
 
                     options.amount = newAmount;
                     let msg = JSON.stringify({
+                        userId: options.userId,
                         message: "Your current percent of ".concat(options.Xpercent, "% increased to ").concat((MinPercentFromMinAmount * 100.1).toFixed(2), "% ") + "in order to rent with NiceHash's min. Amount of 0.005",
                         db: {Xpercent: (MinPercentFromMinAmount * 100.1).toFixed(2)}
                     });
@@ -370,6 +374,7 @@ class AutoRenter {
             console.log('MinPercentFromBittrexMinWithdrawal, options.Xpercent:', MinPercentFromBittrexMinWithdrawal, options.Xpercent)
             if (options.Xpercent < MinPercentFromBittrexMinWithdrawal) {
                 let msg = JSON.stringify({
+                    userId: options.userId,
                     update: true,
                     message: "In order to mine with the given token of ".concat(options.Xpercent, " must increase your pecent to ").concat((MinPercentFromBittrexMinWithdrawal * 100.1).toFixed(2), "% , ") + "and try renting again.",
                     db: {autoRent: false}
@@ -411,6 +416,7 @@ class AutoRenter {
     async rentPreprocess(options) {
         let market = await this.compareMarkets(options)
         options.emitter.emit('message', JSON.stringify({
+            userId: options.userId,
             message: 'Rental market ' + market
         }));
         if (market === false) {
@@ -487,6 +493,7 @@ class AutoRenter {
 
         if (!this.rental_providers || this.rental_providers.length === 0) {
             let msg = JSON.stringify({
+                userId: inputOptions.userId,
                 update: false,
                 autoRent: false,
                 message: 'Rent Cancelled, no rental providers found to rent from.'
@@ -536,6 +543,7 @@ class AutoRenter {
             if (status === 'WARNING') {
                 if(badge.status.type === 'LOW_BALANCE') {
                     inputOptions.emitter.emit('message', JSON.stringify({
+                        userId: inputOptions.userId,
                             update: true,
                             message: 'Warning: Low balance in your account.'
                     }));
@@ -543,6 +551,7 @@ class AutoRenter {
             }
             if (badge.status.type === 'CUTOFF') {
                 inputOptions.emitter.emit('message', JSON.stringify({
+                    userId: inputOptions.userId,
                     update: true,
                     message: badge.status.message
                 }));
@@ -620,6 +629,7 @@ class AutoRenter {
           if (returnData.status === 'ERROR') {
             if(badges[0].market === MiningRigRentals) {
                 let msg = {
+                    userId: inputOptions.userId,
                     update: false,
                     autoRent: false,
                     message: `SelectedRigsTHs :  ${badges[0].selectedRigsTHs.toFixed(8)} \n`+
@@ -637,6 +647,7 @@ class AutoRenter {
             }
             if(badges[0].market === NiceHash) {
                 let msg = {
+                    userId: inputOptions.userId,
                     update: false,
                     autoRent: false,
                     message: `Cost found BTC:  ${Number(badges[0].status.cost).toFixed(8)} \n`+
@@ -673,6 +684,7 @@ class AutoRenter {
                     }
     
                     let msg = {
+                        userId: inputOptions.userId,
                         update: false,
                         autoRent: true,
                         badge: badges,
@@ -718,6 +730,7 @@ class AutoRenter {
             }
             if(returnData.rentals[0].market === NiceHash) {
                 let msg = {
+                    userId: inputOptions.userId,
                     update: false,
                     autoRent: true,
                     badge: badges,
