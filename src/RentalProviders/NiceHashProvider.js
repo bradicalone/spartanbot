@@ -289,6 +289,7 @@ class NiceHashProvider extends RentalProvider {
 			status,
 			totalHashesTH: options.limit,
 			duration: options.duration,
+			type: options.type,
 			amount: options.amount,
 			limit: options.limit.toFixed(2),
 			price: options.price,
@@ -305,7 +306,7 @@ class NiceHashProvider extends RentalProvider {
 
 	/**
 	 * Create new order. Only standard orders can be created with use of API. Gets passed a badge by RentalProvider
-	 * @param options
+	 * @param {Object} options - The Options for the rental operation
 	 * @param {string|number} options.amount - Pay amount in BTC;
 	 * @param {string|number} options.price - Price in BTC/GH/day or BTC/TH/day;
 	 * @param {string|number} [options.limit=0.01] - Speed limit in GH/s or TH/s (0 for no limit);
