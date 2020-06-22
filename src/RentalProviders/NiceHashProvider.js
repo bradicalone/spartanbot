@@ -218,6 +218,11 @@ class NiceHashProvider extends RentalProvider {
 	_returnActivePool() {
 		return this.activePool
 	}
+
+	async getFixedPrice(options) {
+		return await this.api.getFixedPrice(options);
+	}
+
 	/**
 	 * returns stats current (orders) for EU & USA market
 	 * @private
