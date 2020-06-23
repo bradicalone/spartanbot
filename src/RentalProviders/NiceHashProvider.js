@@ -258,7 +258,18 @@ class NiceHashProvider extends RentalProvider {
 				message = `Hashrate/limit must be >= 0.01 TH (10,000 MH)`
 				status.type = LOW_LIMIT
 			}
-			return {success: false, message, status}
+			return {
+				success: false,
+				message,
+				status,
+				totalHashesTH: options.limit,
+				duration: options.duration,
+				type: options.type,
+				amount: options.amount,
+				limit: options.limit.toFixed(2),
+				price: options.price,
+				balance
+			}
 		}
 
 		//get price, amount, hash

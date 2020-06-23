@@ -496,7 +496,8 @@ class AutoRenter {
         // return badges
         return {
             status: NORMAL,
-            badges: badges
+            badges: badges,
+            market: market
           };
     }
 
@@ -571,7 +572,7 @@ class AutoRenter {
         for (let badge of badges) {
             let status = badge.status.status
             console.log('BADGE PROVIDER AutoRenter.js line 553 ENDS HERE! CHANGE RETURN', badge.status)
-            if (status === 'WARNING') {
+            if (status === 'WARNING' || status === 'ERROR') {
                 if(badge.status.type === 'LOW_BALANCE') {
                     inputOptions.emitter.emit('message', JSON.stringify({
                         userId: inputOptions.userId,
@@ -587,7 +588,7 @@ class AutoRenter {
                     message: badge.status.message
                 }));
             }
-            //Rent
+        
             let rentalReturn = await badge.provider.rent(badge); //RentalProvider.js rent()
 
             for (let rental of rentalReturn) {
@@ -658,7 +659,7 @@ class AutoRenter {
           }
 
           if (returnData.status === 'ERROR') {
-            if(badges[0].market === MiningRigRentals) {
+            if (preprocess.market === MiningRigRentals) {
                 let msg = {
                     userId: inputOptions.userId,
                     update: false,
@@ -668,6 +669,8 @@ class AutoRenter {
                     `${ErrorMsg}`,
                     badge: badges,
                     emitter: inputOptions.emitter,
+                    timer: inputOptions.Timer,
+                    name: inputOptions.name,
                     db: {
                         CostOfRentalBtc: Math.abs(0).toFixed(8)
                     },
@@ -676,7 +679,7 @@ class AutoRenter {
                 inputOptions.emitter.emit('rented', msg);
                 return;
             }
-            if(badges[0].market === NiceHash) {
+            if (preprocess.market === NiceHash) {
                 let msg = {
                     userId: inputOptions.userId,
                     update: false,
@@ -688,6 +691,8 @@ class AutoRenter {
                     `${ErrorMsg} .`,
                     badge: badges,
                     emitter: inputOptions.emitter,
+                    timer: inputOptions.Timer,
+                    name: inputOptions.name,
                     db: {
                         CostOfRentalBtc: 0.000000
                     },
@@ -719,6 +724,8 @@ class AutoRenter {
                         autoRent: true,
                         badge: badges,
                         emitter: inputOptions.emitter,
+                        timer: inputOptions.Timer,
+                        name: inputOptions.name,
                         db: {
                             CostOfRentalBtc: Math.abs(amount).toFixed(8)
                         },
@@ -765,6 +772,8 @@ class AutoRenter {
                     autoRent: true,
                     badge: badges,
                     emitter: inputOptions.emitter,
+                    timer: inputOptions.Timer,
+                    name: inputOptions.name,
                     db: {
                         CostOfRentalBtc: Number(returnData.rentals[0].status.cost).toFixed(8)
                     },
