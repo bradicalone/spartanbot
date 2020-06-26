@@ -672,11 +672,13 @@ class AutoRenter {
                     autoRent: false,
                     message: `SelectedRigsTHs :  ${badges[0].selectedRigsTHs.toFixed(8)} \n`+
                     `Current balance: ${badges[0].balance}  BTC \n`+
+                    `Duration: ${badges[0].duration} hours. \n`+
                     `${ErrorMsg}`,
                     badge: badges,
                     emitter: inputOptions.emitter,
                     timer: inputOptions.Timer,
                     name: inputOptions.name,
+                    userOptions: inputOptions,
                     db: {
                         CostOfRentalBtc: Math.abs(0).toFixed(8)
                     },
@@ -699,6 +701,7 @@ class AutoRenter {
                     emitter: inputOptions.emitter,
                     timer: inputOptions.Timer,
                     name: inputOptions.name,
+                    userOptions: inputOptions,
                     db: {
                         CostOfRentalBtc: 0.000000
                     },
@@ -732,12 +735,14 @@ class AutoRenter {
                         emitter: inputOptions.emitter,
                         timer: inputOptions.Timer,
                         name: inputOptions.name,
+                        userOptions: inputOptions,
                         db: {
                             CostOfRentalBtc: Math.abs(amount).toFixed(8)
                         },
                         message: `Current cost of rental in BTC :  ${Math.abs(amount).toFixed(8)} \n`+
                         `SelectedRigsTHs :  ${badges[0].selectedRigsTHs.toFixed(8)} \n`+
-                        `Current balance: ${badges[0].balance} BTC`,
+                        `Current balance: ${badges[0].balance} BTC \n`+
+                        `Duration: ${badges[0].duration} hours.`,
                         rigIds: ids,
                         rentalId: rentalIds || ''
                     };
@@ -768,7 +773,7 @@ class AutoRenter {
                     let transactions = res.data.transactions;
                     return getCostOfRental(ids, transactions, rentalIds);
                 } catch (e) {
-                    cconsole.log('Get Cost of rental AutoRener.js Line 765: ', e);
+                    console.log('Get Cost of rental AutoRener.js Line 765: ', e);
                 }
             }
             if(returnData.rentals[0].market === NiceHash) {
@@ -780,12 +785,14 @@ class AutoRenter {
                     emitter: inputOptions.emitter,
                     timer: inputOptions.Timer,
                     name: inputOptions.name,
+                    userOptions: inputOptions,
                     db: {
                         CostOfRentalBtc: Number(returnData.rentals[0].status.cost).toFixed(8)
                     },
                     message: `Current cost of rental in BTC :  ${Number(returnData.rentals[0].status.cost).toFixed(8)} \n`+
                     `TotalHashesTH: ${Number(badges[0].totalHashesTH).toFixed(8)} \n`+
-                    `Available balance BTC: ${returnData.rentals[0].res.availableAmount}`
+                    `Available balance BTC: ${returnData.rentals[0].res.availableAmount} \n`+
+                    `Duration: ${badges[0].duration} hours.`,
                 };
                 inputOptions.emitter.emit('rented', msg);
                 return;
