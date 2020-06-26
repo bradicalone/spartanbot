@@ -312,12 +312,18 @@ class AutoRenter {
         let getNiceHashAmount = async hashrateNH => {
             if(options.type === 'FIXED') {
                 const provider = this.rental_providers.filter(providers => providers.constructor.name === 'NiceHashProvider')[0]
-                let res = await provider.getFixedPrice({
-                    limit: options.hashrate,
-                    market: 'USA',
-                    algorithm: options.algorithm
-                })
-                console.log('DURATION', 24 * (0.005 / (niceHash.marketPriceNhScryptBtcThSD * options.hashrate)))
+                let res;
+                try {
+                    res = await provider.getFixedPrice({
+                        limit: options.hashrate,
+                        market: 'USA',
+                        algorithm: options.algorithm
+                    });
+                } catch(err) {
+                    return {
+                        err
+                    }
+                }
                 // hashrate is based on if current hashrate is below the threshold NiceHash allows of .01
                 return {
                     amount: minNiceHashAmount,
@@ -762,7 +768,7 @@ class AutoRenter {
                     let transactions = res.data.transactions;
                     return getCostOfRental(ids, transactions, rentalIds);
                 } catch (e) {
-                    console.log('ERROR SETTIMEOUT: ', e);
+                    cconsole.log('Get Cost of rental AutoRener.js Line 765: ', e);
                 }
             }
             if(returnData.rentals[0].market === NiceHash) {

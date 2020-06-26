@@ -1,7 +1,7 @@
 import RentalProvider from "./RentalProvider";
 import NiceHash from 'nicehash-api'
-import {getDuration, getEstAmountSpent, serializePool, toMRRAmount} from "../util";
-import {ERROR, NORMAL, WARNING, LOW_LIMIT, LOW_BALANCE, CUTOFF} from "../constants";
+import { getDuration, getEstAmountSpent, serializePool, toMRRAmount } from "../util";
+import { ERROR, NORMAL, WARNING, LOW_LIMIT, LOW_BALANCE, CUTOFF } from "../constants";
 
 class NiceHashProvider extends RentalProvider {
 	constructor(settings) {
@@ -10,7 +10,7 @@ class NiceHashProvider extends RentalProvider {
 		this.api_key = settings.api_key || settings.key;
 		this.api_secret = settings.api_secret;
 		this.api_id = settings.api_id || settings.id;
-		
+
 		this.api = new NiceHash(settings)
 	}
 
@@ -76,8 +76,8 @@ class NiceHashProvider extends RentalProvider {
 				message: 'must provide all of the following: host, port, user, pass'
 			}
 		}
-		let pool = {...options, market: this.getInternalType(), providerUID: this.getUID()};
-		
+		let pool = { ...options, market: this.getInternalType(), providerUID: this.getUID() };
+
 		try {
 			let res = await this.api.createOrEditPool(options);
 			if (res.success) {
@@ -87,7 +87,7 @@ class NiceHashProvider extends RentalProvider {
 				pool = res
 			}
 		} catch (err) {
-			  throw new Error("Failed to create pool: ".concat(err));
+			throw new Error("Failed to create pool: ".concat(err));
 		}
 		this._addPools(pool)
 		this._setActivePool(pool.id)
@@ -108,10 +108,10 @@ class NiceHashProvider extends RentalProvider {
 		}
 		for (let pool of this.pools) {
 			if (pool.id === id) {
-				return {success: false, message: 'failed to remove pool with .splice'}
+				return { success: false, message: 'failed to remove pool with .splice' }
 			}
 		}
-		return {success: true, message: `Pool: ${id} removed.`}
+		return { success: true, message: `Pool: ${id} removed.` }
 	}
 
 	/**
@@ -131,36 +131,36 @@ class NiceHashProvider extends RentalProvider {
 	 */
 	async updatePool(id, options) {
 		for (let pool of this.pools) {
-			if (pool.id === id ) {
-				for (let opt in pool) {          
-          switch(opt) {
-            case 'algorithm':
-              options.type = options.type || pool[opt]
-              break
-            case 'name':
-              options.name = options.name || pool[opt]
-              break;
-            case 'stratumHostname':
-              options.host = options.host || pool[opt]
-              break;
-            case 'stratumPort':
-              options.port = options.port || pool[opt]
-              break;
-            case 'username':
-              options.user = options.user || pool[opt]
-              break;
-            case 'password':
-              options.pass = options.pass || pool[opt]
-              break;
-            case 'notes': 
-              options.notes = options.notes || ''
-              break;
-          }
+			if (pool.id === id) {
+				for (let opt in pool) {
+					switch (opt) {
+						case 'algorithm':
+							options.type = options.type || pool[opt]
+							break
+						case 'name':
+							options.name = options.name || pool[opt]
+							break;
+						case 'stratumHostname':
+							options.host = options.host || pool[opt]
+							break;
+						case 'stratumPort':
+							options.port = options.port || pool[opt]
+							break;
+						case 'username':
+							options.user = options.user || pool[opt]
+							break;
+						case 'password':
+							options.pass = options.pass || pool[opt]
+							break;
+						case 'notes':
+							options.notes = options.notes || ''
+							break;
+					}
 				}
-      }
-    }
-    const res =  await this.api.createOrEditPool(options)
-		return {success: true, data: {id, success: true, message: 'Updated'}}
+			}
+		}
+		const res = await this.api.createOrEditPool(options)
+		return { success: true, data: { id, success: true, message: 'Updated' } }
 	}
 
 	/**
@@ -219,6 +219,10 @@ class NiceHashProvider extends RentalProvider {
 		return this.activePool
 	}
 
+	async getDuration(settings) {
+		return await this.api.getDuration(settings)
+	}
+
 	async getFixedPrice(options) {
 		return await this.api.getFixedPrice(options);
 	}
@@ -233,19 +237,37 @@ class NiceHashProvider extends RentalProvider {
 	// Gets hit from async rentPreprocess(options) in AutoRenter.js 
 	async preprocessRent(options) {
 
-		let status = {status: NORMAL}
+		let status = { status: NORMAL }
 		let balance;
 		try {
 			let balance_Object = await this._getBalance('BTC')
-      		balance = Number(balance_Object);
+			balance = Number(balance_Object);
 		} catch (err) {
 			status.status = ERROR
-			return {success: false, message: 'failed to get balance', status}
+			return { success: false, message: 'failed to get balance', status }
+		}
+
+		let duration;
+		try {
+			let duration = await this.getDuration({
+				amount: options.amount,
+				limit: options.limit.toFixed(8),
+				price: options.price,
+				type: options.type.toUpperCase()
+			})
+			duration = duration.estimateDurationInSeconds / 60 / 60
+		} catch (err) {
+			status.status = _constants.ERROR;
+			return {
+				success: false,
+				message: 'failed to get duration',
+				status
+			};
 		}
 
 		const hashrateTH = options.limit
-    	const minimumAmount = 0.005;
-    	const minimumLimit = 0.01;
+		const minimumAmount = 0.005;
+		const minimumLimit = 0.01;
 
 		if (balance < minimumAmount || hashrateTH < minimumLimit) {
 			status.status = ERROR
@@ -263,7 +285,7 @@ class NiceHashProvider extends RentalProvider {
 				message,
 				status,
 				totalHashesTH: options.limit,
-				duration: options.duration,
+				duration: duration.toFixed(2),
 				type: options.type,
 				amount: options.amount,
 				limit: options.limit.toFixed(2),
@@ -292,27 +314,27 @@ class NiceHashProvider extends RentalProvider {
 		status.status = WARNING;
 		status.type = CUTOFF;
 		status.message = 'Ideal amount to spend for desired limit/duration is below minimum amount. ' + 'Either cutoff rental at desired duration or let rental finish calculated time for 0.005 BTC';
-		status.totalDuration = options.duration;
+		status.totalDuration = duration.toFixed(2);
 		status.cost = options.amount;
 
 		return {
 			market: "NiceHash",
 			status,
 			totalHashesTH: options.limit,
-			duration: options.duration,
+			duration: duration.toFixed(2),
 			type: options.type,
 			amount: options.amount,
 			limit: options.limit.toFixed(2),
 			price: options.price,
 			balance,
 			query: {
-			  hashrate_found: options.limit,
-			  cost_found: options.amount,
-			  duration: options.duration
+				hashrate_found: options.limit,
+				cost_found: options.amount,
+				duration: duration
 			},
 			uid: this.getUID(),
 			provider: this
-		  };
+		};
 	}
 
 	/**
@@ -345,11 +367,11 @@ class NiceHashProvider extends RentalProvider {
 		}
 
 		if (!this.returnPools()) {
-			return {success: false, message: `No pool found`, status: ERROR}
+			return { success: false, message: `No pool found`, status: ERROR }
 		}
 
 		if (!this._returnActivePool()) {
-			return {success: false, message: `No active pool set`, status: ERROR}
+			return { success: false, message: `No active pool set`, status: ERROR }
 		}
 
 		let poolID = this._returnActivePool();
@@ -366,23 +388,23 @@ class NiceHashProvider extends RentalProvider {
 		for (let opt in options) {
 			rentOptions[opt] = options[opt]
 		}
-		rentOptions = {...rentOptions, ..._pool}
+		rentOptions = { ...rentOptions, ..._pool }
 
 		let res;
 		try {
 			res = await this.api.createOrder(rentOptions)
 		} catch (err) {
-			return {success: false, message: `Failed to create NiceHash order`, error: err, status: ERROR}
+			return { success: false, message: `Failed to create NiceHash order`, error: err, status: ERROR }
 		}
 
 		let rentalId;
 		let success;
-	
-		if (res.status.code === "ACTIVE" || res.status.code === "COMPLETED" ) {
-		  success = true;
-		  rentalId = res.id;
+
+		if (res.status.code === "ACTIVE" || res.status.code === "COMPLETED") {
+			success = true;
+			rentalId = res.id;
 		} else {
-		  success = false;
+			success = false;
 		}
 
 		return {
@@ -398,7 +420,7 @@ class NiceHashProvider extends RentalProvider {
 			rentalId,
 			cutoff: options.cutoff,
 			uid: this.getUID()
-		  };
+		};
 	}
 
 	/**
@@ -415,13 +437,13 @@ class NiceHashProvider extends RentalProvider {
 		try {
 			res = await this.api.removeOrder(id)
 		} catch (err) {
-			return {success: false, error: err, errorType: 'NETWORK', id}
+			return { success: false, error: err, errorType: 'NETWORK', id }
 		}
 
 		if (res.error) {
-			return {success: false, error: res.error, errorType: 'NICEHASH', id}
+			return { success: false, error: res.error, errorType: 'NICEHASH', id }
 		} else {
-			return {success: true, data: res, id}
+			return { success: true, data: res, id }
 		}
 	}
 
@@ -429,7 +451,7 @@ class NiceHashProvider extends RentalProvider {
 		return await this.api.getDepositAddresses(currency)
 	}
 
-  async getWithdrawalAddresses(currency) {
+	async getWithdrawalAddresses(currency) {
 		return await this.api.getWithdrawalAddresses(currency)
 	}
 }
