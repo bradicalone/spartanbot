@@ -353,7 +353,7 @@ class AutoRenter {
                 }
 
                 if (provider.getInternalType() === NiceHash) {
-                    let orderBook = await provider.getOrderBook();
+                    let orderBook = await provider.getOrderBook(options.hashrate);
                     let orders = orderBook.stats.USA.orders;
                     let length = orders.length;
                     
@@ -408,7 +408,7 @@ class AutoRenter {
             const MinPercentFromBittrexMinWithdrawal = BittrexMinWithdrawal / (BittrexMinWithdrawal + options.NetworkHashRate * MRR.marketPriceMrrScryptBtcThSD * options.duration);
             
             console.log('MinPercentFromBittrexMinWithdrawal, options.Xpercent:', MinPercentFromBittrexMinWithdrawal, options.Xpercent)
-            if (options.Xpercent < MinPercentFromBittrexMinWithdrawal) {
+            if (options.Xpercent < MinPercentFromBittrexMinWithdrawal && options.token !== 'RVN') {
                 let msg = JSON.stringify({
                     userId: options.userId,
                     update: true,

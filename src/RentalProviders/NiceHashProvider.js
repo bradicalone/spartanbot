@@ -231,8 +231,8 @@ class NiceHashProvider extends RentalProvider {
 	 * returns stats current (orders) for EU & USA market
 	 * @private
 	 */
-	async getOrderBook() {
-		return await this.api.getOrderBook()
+	async getOrderBook(algo) {
+		return await this.api.getOrderBook(algo)
 	}
 	// Gets hit from async rentPreprocess(options) in AutoRenter.js 
 	async preprocessRent(options) {
@@ -257,7 +257,7 @@ class NiceHashProvider extends RentalProvider {
 			})
 			duration = duration.estimateDurationInSeconds / 60 / 60
 		} catch (err) {
-			status.status = _constants.ERROR;
+			status.status = ERROR;
 			return {
 				success: false,
 				message: 'failed to get duration',
@@ -290,7 +290,9 @@ class NiceHashProvider extends RentalProvider {
 				amount: options.amount,
 				limit: options.limit.toFixed(2),
 				price: options.price,
-				balance
+				balance,
+				provider: this,
+				algorithm: options.algorithm
 			}
 		}
 
@@ -327,14 +329,15 @@ class NiceHashProvider extends RentalProvider {
 			limit: options.limit.toFixed(2),
 			price: options.price,
 			balance,
+			algorithm: options.algorithm,
 			query: {
-				hashrate_found: options.limit,
-				cost_found: options.amount,
-				duration: duration
+			  hashrate_found: options.limit,
+			  cost_found: options.amount,
+			  duration: duration
 			},
 			uid: this.getUID(),
 			provider: this
-		};
+		  };
 	}
 
 	/**
@@ -380,7 +383,7 @@ class NiceHashProvider extends RentalProvider {
 			if (pool.id === poolID)
 				_pool = pool
 		}
-		options.algo = options.algo || 'scrypt'
+		options.algorithm = options.algorithm
 		options.limit = options.limit || '0.01';
 		options.location = options.location || '1'
 
@@ -389,7 +392,7 @@ class NiceHashProvider extends RentalProvider {
 			rentOptions[opt] = options[opt]
 		}
 		rentOptions = { ...rentOptions, ..._pool }
-
+		
 		let res;
 		try {
 			res = await this.api.createOrder(rentOptions)
