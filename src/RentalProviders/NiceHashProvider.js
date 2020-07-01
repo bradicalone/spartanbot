@@ -249,13 +249,13 @@ class NiceHashProvider extends RentalProvider {
 
 		let duration;
 		try {
-			let duration = await this.getDuration({
+			let res = await this.getDuration({
 				amount: options.amount,
 				limit: options.limit.toFixed(8),
 				price: options.price,
 				type: options.type.toUpperCase()
 			})
-			duration = duration.estimateDurationInSeconds / 60 / 60
+			duration = res.estimateDurationInSeconds / 60 / 60
 		} catch (err) {
 			status.status = ERROR;
 			return {
@@ -392,7 +392,7 @@ class NiceHashProvider extends RentalProvider {
 			rentOptions[opt] = options[opt]
 		}
 		rentOptions = { ...rentOptions, ..._pool }
-		
+
 		let res;
 		try {
 			res = await this.api.createOrder(rentOptions)

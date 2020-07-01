@@ -353,7 +353,7 @@ class AutoRenter {
                 }
 
                 if (provider.getInternalType() === NiceHash) {
-                    let orderBook = await provider.getOrderBook(options.hashrate);
+                    let orderBook = await provider.getOrderBook(options.algorithm);
                     let orders = orderBook.stats.USA.orders;
                     let length = orders.length;
                     
