@@ -187,36 +187,99 @@ class MRRProvider extends RentalProvider {
 	 * @async
 	 * @returns {Promise<Object>}
 	 */
-	async _updatePool(id, options) {
-		for (let pool of this.pools) {
-			if (pool.id === id)
-				if (pool.mrrID)
-					id = pool.mrrID
- 		}
-		let res;
-		try {
-			res = await this.api.updatePools(id, options)
-		} catch (err) {
-			throw new Error(`Failed to update pool at MRRProvider.js: ${err}`)
-		}
-		if (res.success) {
-			for (let pool of this.pools) {
-				if (pool.id === id || pool.mrrID === id) {
-					for (let opt in pool) {
-						for (let _opt in options) {
-							if (opt === _opt) {
-								pool[opt] = options[_opt]
-							}
-						}
-					}
-				}
-			}
-			return res
-		} else {
-			return res
-		}
-	}
 
+
+	// async updatePool(id, options) {
+	// 	for (let pool of this.pools) {
+	// 		if (pool.id === id)
+	// 			if (pool.mrrID)
+	// 				id = pool.mrrID
+ 	// 	}
+	// 	let res;
+	// 	try {
+	// 		res = await this.api.updatePools(id, options)
+	// 	} catch (err) {
+	// 		throw new Error(`Failed to update pool at MRRProvider.js: ${err}`)
+	// 	}
+	// 	if (res.success) {
+	// 		for (let pool of this.pools) {
+	// 			if (pool.id === id || pool.mrrID === id) {
+	// 				for (let opt in pool) {
+	// 					for (let _opt in options) {
+	// 						if (opt === _opt) {
+	// 							pool[opt] = options[_opt]
+	// 						}
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 		return res
+	// 	} else {
+	// 		return res
+	// 	}
+	// }
+	async updatePool(id, options) {
+        for (let pool of this.pools) {
+            if (pool.id === id) if (pool.mrrID) id = pool.mrrID;
+        }
+        if (options.type) {
+            let profiles;
+            try {
+                profiles = await this.api.getPoolProfiles();
+            } catch (err) {
+                throw new Error(`error getting profile data: ${err}`)
+            }
+            if (profiles.success) {
+                for (let profile of profiles.data) {
+                    //ToDo: be able to pick a pool profile to use
+                    if (profiles.data.length === 0) {
+                        throw new Error(`No profile data. Consider creating a pool/profile`)
+                    } 
+					
+                    if (profile.algo.name === options.type.toLowerCase()) { // If profile exist just update the pool
+                        try {
+                            this.setActivePoolProfile(profile.id)
+                            return await this.api.updatePools(id, options);
+                        } catch (err) {
+                            throw new Error("Failed to update pool at MRRProvider.js: ".concat(err));
+                        }
+                    } 
+                }
+				
+                return await this.createPoolAndProfile(options); // If Profile doesn't exist makes a new profile and pool 
+       
+            } else {
+                throw new Error(`Error getting profile data. Invalid nonce most likely: ${JSON.stringify(profiles, null, 4)}`)
+            }
+		}
+		
+		// MIGHT NOT NEED EVERYTHING DOWN
+        let res;
+
+        try {
+            res = await this.api.updatePools(id, options);
+        } catch (err) {
+            throw new Error("Failed to update pool at MRRProvider.js: ".concat(err));
+        }
+
+        if (res.success) {
+            for (let pool of this.pools) {
+                if (pool.id === id || pool.mrrID === id) {
+                    for (let opt in pool) {
+                        for (let _opt in options) {
+                            if (opt === _opt) {
+                                pool[opt] = options[_opt];
+                            }
+                        }
+                    }
+                }
+            }
+
+            return res;
+        } else {
+            return res;
+        }
+    }
 	/**
 	 * Get all pools, a single pool by ID, or multiple pools by their IDs
 	 * @param {(number|Array.<number>)} [ids] - can be a single pool id or multiple pool ids. If no ids are passed, will fetch all pools
@@ -350,6 +413,7 @@ class MRRProvider extends RentalProvider {
 			let response = await this.api.createPoolProfile(options.profileName, options.algo)
 			if (response.success) {
 				poolProfile = response.data.id
+				this.setActivePoolProfile(poolProfile)
 			}
 		} catch (err) {
 			throw new Error(`Could not create Pool Profile \n ${err}`)
@@ -701,7 +765,7 @@ class MRRProvider extends RentalProvider {
 	 * @param {number} duration - in hours
 	 * @returns {Promise<Array.<Object>>}
 	 */
-	async getRigsToRent(hashrate, duration) {
+	async getRigsToRent(hashrate, duration, algo) {
 		if (typeof hashrate !== 'number')
 			hashrate = parseFloat(hashrate)
 		let balance;
@@ -719,7 +783,7 @@ class MRRProvider extends RentalProvider {
 		}
 
 		let rigOpts = {
-			type: 'scrypt',
+			type: algo,
 			minhours: {
 				max: duration
 			}

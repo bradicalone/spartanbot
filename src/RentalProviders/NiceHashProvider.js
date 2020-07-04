@@ -255,7 +255,10 @@ class NiceHashProvider extends RentalProvider {
 				price: options.price,
 				type: options.type.toUpperCase()
 			})
-			duration = res.estimateDurationInSeconds / 60 / 60
+
+			let numberToString = (res.estimateDurationInSeconds / 60 / 60) +'';
+			duration = numberToString.replace(/(.*\.\d{2})(.+)/,'$1'); // Javascripts toFixed() is unreliable and rounds and we don't need that!
+
 		} catch (err) {
 			status.status = ERROR;
 			return {
@@ -263,6 +266,19 @@ class NiceHashProvider extends RentalProvider {
 				message: 'failed to get duration',
 				status
 			};
+		}
+
+		let limitToString = options.limit+''
+		let limit = limitToString.replace(/(.*\.\d{2})(.+)/, '$1');  // Javascripts toFixed() is unreliable and rounds and we don't need that!
+
+		let totalHashes;
+		let label;
+		if (options.displayMarketFactor === 'GH') {
+			totalHashes = options.limit
+			label = 'Total Gigahashes'
+		} else {
+			totalHashes = options.limit
+			label = 'Total Terahashes'
 		}
 
 		const hashrateTH = options.limit
@@ -285,10 +301,10 @@ class NiceHashProvider extends RentalProvider {
 				message,
 				status,
 				totalHashesTH: options.limit,
-				duration: duration.toFixed(2),
+				duration: duration,
 				type: options.type,
 				amount: options.amount,
-				limit: options.limit.toFixed(2),
+				limit: limit,
 				price: options.price,
 				balance,
 				provider: this,
@@ -316,28 +332,28 @@ class NiceHashProvider extends RentalProvider {
 		status.status = WARNING;
 		status.type = CUTOFF;
 		status.message = 'Ideal amount to spend for desired limit/duration is below minimum amount. ' + 'Either cutoff rental at desired duration or let rental finish calculated time for 0.005 BTC';
-		status.totalDuration = duration.toFixed(2);
+		status.totalDuration = duration;
 		status.cost = options.amount;
 
 		return {
 			market: "NiceHash",
 			status,
 			totalHashesTH: options.limit,
-			duration: duration.toFixed(2),
+			duration: duration,
 			type: options.type,
 			amount: options.amount,
-			limit: options.limit.toFixed(2),
+			limit: limit,
 			price: options.price,
 			balance,
 			algorithm: options.algorithm,
 			query: {
-			  hashrate_found: options.limit,
-			  cost_found: options.amount,
-			  duration: duration
+				hashrate_found: options.limit,
+				cost_found: options.amount,
+				duration: duration
 			},
 			uid: this.getUID(),
 			provider: this
-		  };
+		};
 	}
 
 	/**

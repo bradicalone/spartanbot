@@ -37,6 +37,7 @@ class AutoRenter {
     async updatePoolAddress(options) {
         let id;
         let walletAddress = options.address
+        let token = options.token
         let pools = options.SpartanBot.returnPools(options.providerType)
         if (pools.length === 0) {
             options.emitter.emit('message', JSON.stringify({
@@ -60,14 +61,41 @@ class AutoRenter {
                 id = pool.id
             }
         }
-        // If all pools have the same priority or if there is only one pool it returns that id
-        if (typeof id === 'undefined') id = pools[0].id
+       
+        if (typeof id === 'undefined') id = pools[0].id  // If all pools have the same priority or if there is only one pool it returns that id
+
+        let updatedPool;
+
         try {
-            let updatedPool = await options.SpartanBot.updatePool(id, {
-                user: walletAddress,
-                providerType: options.providerType,
-                id: id
-            });
+            if ( token === "RVN" ) {
+                updatedPool = await options.SpartanBot.updatePool(id, {
+                    type: 'kawPOW',
+                    name: 'RVN-2Miners-USA',
+                    algo: 'KawPOW',
+                    host: 'us-rvn.2miners.com',
+                    port: '6061',
+                    pass: 'x',
+                    priority: 0,
+                    profileName: 'Kawpow',
+                    user: walletAddress,
+                    providerType: options.providerType,
+                    id: id
+                });
+            } else if ( token === "FLO" ) {
+                updatedPool = await options.SpartanBot.updatePool(id, {
+                    type: 'Scrypt',
+                    name: 'MLG',
+                    algo: 'Scrypt',
+                    host: '35.224.24.139',
+                    port: '7314',
+                    pass: 'x',
+                    priority: 0,
+                    profileName: 'MLG',
+                    user: walletAddress,
+                    providerType: options.providerType,
+                    id: id
+                });
+            }
       
             options.emitter.emit('message', JSON.stringify({
                 userId: options.userId,
@@ -92,6 +120,7 @@ class AutoRenter {
 	 * @param {Object} options - The Options for the rental operation
 	 * @param {Number} options.hashrate - The amount of Hashrate you wish to rent
 	 * @param {Number} options.duration - The duration (in seconds) that you wish to rent hashrate for
+     * @param {String} options.algorithm - The algorithm to rent with
 	 * @returns {Promise<Object|Array.<Object>>}
 	 */
     async mrrRentPreprocess(options) {
@@ -135,7 +164,7 @@ class AutoRenter {
 
         let rigs_to_rent = [];
         try {
-            rigs_to_rent = await _provider.getRigsToRent(hashrate, options.duration)
+            rigs_to_rent = await _provider.getRigsToRent(hashrate, options.duration, options.algorithm)
         } catch (err) {
             return { status: ERROR, market: MiningRigRentals, message: 'failed to fetch rigs from API', err }
         }
@@ -156,7 +185,7 @@ class AutoRenter {
 
             totalBalance += balance
             //get the profile id needed to rent for each provider
-            let profile = provider.returnActivePoolProfile() || await provider.getProfileID();
+            let profile = provider.returnActivePoolProfile() || await provider.getProfileID(options.algorithm);
             providers.push({
                 balance,
                 profile,
@@ -354,6 +383,9 @@ class AutoRenter {
 
                 if (provider.getInternalType() === NiceHash) {
                     let orderBook = await provider.getOrderBook(options.algorithm);
+                    options.marketFactor = orderBook.stats.USA.marketFactor
+                    options.displayMarketFactor = orderBook.stats.USA.displayMarketFactor
+
                     let orders = orderBook.stats.USA.orders;
                     let length = orders.length;
                     
@@ -693,7 +725,7 @@ class AutoRenter {
                     update: false,
                     autoRent: false,
                     message: `Cost found BTC:  ${0.000000} \n`+
-                    `TotalHashesTH: ${Number(badges[0].totalHashesTH).toFixed(8)} \n`+
+                    `${badges[0].label}: ${Number(badges[0].totalHashes).toFixed(8)} \n`+
                     `Current balance: ${badges[0].balance} \n`+
                     `Duration: ${badges[0].duration} hours. \n`+
                     `${ErrorMsg} .`,
@@ -790,9 +822,9 @@ class AutoRenter {
                         CostOfRentalBtc: Number(returnData.rentals[0].status.cost).toFixed(8)
                     },
                     message: `Current cost of rental in BTC :  ${Number(returnData.rentals[0].status.cost).toFixed(8)} \n`+
-                    `TotalHashesTH: ${Number(badges[0].totalHashesTH).toFixed(8)} \n`+
+                    `${badges[0].label}: ${Number(badges[0].totalHashes).toFixed(8)} \n`+
                     `Available balance BTC: ${returnData.rentals[0].res.availableAmount} \n`+
-                    `Duration: ${badges[0].duration} hours.`,
+                    `Duration: ${badges[0].duration} hours.`, 
                 };
                 inputOptions.emitter.emit('rented', msg);
                 return;

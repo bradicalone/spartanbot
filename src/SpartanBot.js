@@ -533,6 +533,7 @@ class SpartanBot {
 	 * Creates a pool that will be added to all providers
 	 * @param {Object} options
 	 * @param {string} options.algo - Algorithm ('scrypt', 'x11', etc)
+	 * @param {string} options.id - unique id for each pool (for spartanbot only)
 	 * @param {string} options.host - Pool host, the part after stratum+tcp://
 	 * @param {number} options.port - Pool port, the part after the : in most pool host strings
 	 * @param {string} options.user - Your workname
