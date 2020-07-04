@@ -300,7 +300,6 @@ class NiceHashProvider extends RentalProvider {
 				success: false,
 				message,
 				status,
-				totalHashesTH: options.limit,
 				duration: duration,
 				type: options.type,
 				amount: options.amount,
@@ -308,8 +307,12 @@ class NiceHashProvider extends RentalProvider {
 				price: options.price,
 				balance,
 				provider: this,
-				algorithm: options.algorithm
-			}
+				algorithm: options.algorithm,
+				marketFactor: options.marketFactor,
+				displayMarketFactor: options.displayMarketFactor,
+				totalHashes,
+				label
+			  };
 		}
 
 		//get price, amount, hash
@@ -331,14 +334,15 @@ class NiceHashProvider extends RentalProvider {
 
 		status.status = WARNING;
 		status.type = CUTOFF;
-		status.message = 'Ideal amount to spend for desired limit/duration is below minimum amount. ' + 'Either cutoff rental at desired duration or let rental finish calculated time for 0.005 BTC';
+		status.message = `Algorithm: ${options.algorithm}`;
 		status.totalDuration = duration;
 		status.cost = options.amount;
 
 		return {
 			market: "NiceHash",
 			status,
-			totalHashesTH: options.limit,
+			totalHashes,
+			label,
 			duration: duration,
 			type: options.type,
 			amount: options.amount,
@@ -346,14 +350,16 @@ class NiceHashProvider extends RentalProvider {
 			price: options.price,
 			balance,
 			algorithm: options.algorithm,
+			marketFactor: options.marketFactor,
+			displayMarketFactor: options.displayMarketFactor,
 			query: {
-				hashrate_found: options.limit,
-				cost_found: options.amount,
-				duration: duration
+			  hashrate_found: options.limit,
+			  cost_found: options.amount,
+			  duration: duration
 			},
 			uid: this.getUID(),
 			provider: this
-		};
+		  };
 	}
 
 	/**

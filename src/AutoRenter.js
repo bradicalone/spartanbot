@@ -68,12 +68,13 @@ class AutoRenter {
 
         try {
             if ( token === "RVN" ) {
+                let port = options.providerType === "MiningRigRentals" ? '6060' : '6161'
                 updatedPool = await options.SpartanBot.updatePool(id, {
                     type: 'kawPOW',
                     name: 'RVN-2Miners-USA',
                     algo: 'KawPOW',
                     host: 'us-rvn.2miners.com',
-                    port: '6061',
+                    port: port,
                     pass: 'x',
                     priority: 0,
                     profileName: 'Kawpow',
