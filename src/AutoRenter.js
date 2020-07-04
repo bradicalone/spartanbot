@@ -419,19 +419,31 @@ class AutoRenter {
 
                 // Checks if the new renting hashrate price is lower than the min amount NiceHash accepts of 0.005
                 if (lowestPriceGHs < minNiceHashAmount) {
-                    const MinPercentFromMinAmount = 24 * .005 / (24 * .005 + options.difficulty * Math.pow(2, 32) / 40 / 1000000000000 * niceHash.marketPriceNhScryptBtcThSD * 24);
+                    let MinPercentFromMinAmount;
+                    if(options.token === "FLO") {
+                      MinPercentFromMinAmount = 24 * .005 / (24 * .005 + options.difficulty * Math.pow(2, 32) / 40 / 1000000000000 * niceHash.marketPriceNhScryptBtcThSD * 24);
+                    }
+                    if(options.token === "RVN") {
+                      MinPercentFromMinAmount = 24 * .005 / (24 * .005 + options.difficulty * Math.pow(2, 32) / 60 / 1000000000000 * niceHash.marketPriceNhScryptBtcThSD * 24)
+                    }
+          
                     let getNewHashrate = await options.newRent(token, MinPercentFromMinAmount);
+             
                     let hashrateRoundedUp = roundNumber(getNewHashrate.Rent);
-                    let newAmount = ( await getNiceHashAmount(hashrateRoundedUp)).amount;
+                    let newAmount = (await getNiceHashAmount(hashrateRoundedUp)).amount;
+                    let percentFROMdecimal = options.token === 'FLO' ? 100.1 : 1
                     options.amount = newAmount;
-                    
-                    let msg = JSON.stringify({
+                    if (options.Xpercent < MinPercentFromMinAmount * percentFROMdecimal)  {
+                      let msg = JSON.stringify({
                         userId: options.userId,
-                        message: "Your current percent of ".concat(options.Xpercent, "% increased to ").concat((MinPercentFromMinAmount * 100.1).toFixed(2), "% ") + "in order to rent with NiceHash's min. Amount of 0.005",
-                        db: {Xpercent: (MinPercentFromMinAmount * 100.1).toFixed(2)}
-                    });
-                    options.emitter.emit('message', msg);
-                }
+                        message: "Your current percent of ".concat(options.Xpercent, "% increased to ").concat((MinPercentFromMinAmount * percentFROMdecimal ).toFixed(2), "% ") + "in order to rent with NiceHash's min. Amount of 0.005",
+                        db: {
+                          Xpercent: (MinPercentFromMinAmount * percentFROMdecimal ).toFixed(2)
+                        }
+                      });
+                      options.emitter.emit('message', msg);
+                    }
+                  }
 
                 console.log('Amount: autorent.js line 367', options.amount);
                 return 'NiceHash';
