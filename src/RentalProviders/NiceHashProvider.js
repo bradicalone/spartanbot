@@ -188,8 +188,7 @@ class NiceHashProvider extends RentalProvider {
 						match = true
 				}
 				if (!match)
-					this.pools.push(serializePool(pool, this.getInternalType()))
-
+				this.pools.push(pools)
 			}
 		} else {
 			let match = false
@@ -198,7 +197,7 @@ class NiceHashProvider extends RentalProvider {
 					match = true
 			}
 			if (!match)
-				this.pools.push(serializePool(pools, this.getInternalType()))
+			this.pools.push(pools)
 		}
 	}
 
