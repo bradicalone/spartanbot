@@ -341,10 +341,10 @@ class AutoRenter {
          */
         let getNiceHashAmount = async hashrateNH => {
             if(options.type === 'FIXED') {
-                const provider = this.rental_providers.filter(providers => providers.constructor.name === 'NiceHashProvider')[0]
+                const NiceHashProvider = this.rental_providers.filter(providers => providers.constructor.name === 'NiceHashProvider')[0]
                 let res;
                 try {
-                    res = await provider.getFixedPrice({
+                    res = await NiceHashProvider.getFixedPrice({
                         limit: options.hashrate,
                         market: 'USA',
                         algorithm: options.algorithm
