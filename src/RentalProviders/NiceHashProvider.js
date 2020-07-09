@@ -223,6 +223,10 @@ class NiceHashProvider extends RentalProvider {
 		return await this.api.getDuration(settings)
 	}
 
+	async getStandardPrice(algo) {
+		return await this.api.getStandardPrice(algo);
+	  }
+
 	async getFixedPrice(options) {
 		return await this.api.getFixedPrice(options);
 	}

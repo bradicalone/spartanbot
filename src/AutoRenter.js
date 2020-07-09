@@ -715,6 +715,7 @@ class AutoRenter {
                     userId: inputOptions.userId,
                     update: false,
                     autoRent: false,
+                    mining: false,
                     message: `SelectedRigsTHs :  ${badges[0].selectedRigsTHs.toFixed(8)} \n`+
                     `Current balance: ${badges[0].balance}  BTC \n`+
                     `Duration: ${badges[0].duration} hours. \n`+
@@ -737,6 +738,7 @@ class AutoRenter {
                     userId: inputOptions.userId,
                     update: false,
                     autoRent: false,
+                    mining: false,
                     message: `Cost found BTC:  ${0.000000} \n`+
                     `${badges[0].label}: ${Number(badges[0].totalHashes).toFixed(8)} \n`+
                     `Current balance: ${badges[0].balance} \n`+
@@ -776,6 +778,7 @@ class AutoRenter {
                         userId: inputOptions.userId,
                         update: false,
                         autoRent: true,
+                        mining: true,
                         badge: badges,
                         emitter: inputOptions.emitter,
                         timer: inputOptions.Timer,
@@ -826,6 +829,7 @@ class AutoRenter {
                     userId: inputOptions.userId,
                     update: false,
                     autoRent: true,
+                    mining: true,
                     badge: badges,
                     emitter: inputOptions.emitter,
                     timer: inputOptions.Timer,
