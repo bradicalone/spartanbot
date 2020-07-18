@@ -546,7 +546,8 @@ class AutoRenter {
                     name: inputOptions.name,
                     userOptions: inputOptions,
                     db: {
-                        CostOfRentalBtc: Math.abs(0).toFixed(8)
+                        CostOfRentalBtc: Math.abs(0).toFixed(8),
+                        duration: badges[0].duration
                     },
                     rentalId: []
                 };
@@ -570,7 +571,8 @@ class AutoRenter {
                     name: inputOptions.name,
                     userOptions: inputOptions,
                     db: {
-                        CostOfRentalBtc: 0.000000
+                        CostOfRentalBtc: 0.000000,
+                        duration: badges[0].duration
                     },
                     rentalId: []
                 };
@@ -605,7 +607,8 @@ class AutoRenter {
                         name: inputOptions.name,
                         userOptions: inputOptions,
                         db: {
-                            CostOfRentalBtc: Math.abs(amount).toFixed(8)
+                            CostOfRentalBtc: Math.abs(amount).toFixed(8),
+                            duration: badges[0].duration
                         },
                         message: `Current cost of rental in BTC :  ${Math.abs(amount).toFixed(8)} \n`+
                         `SelectedRigsTHs :  ${badges[0].selectedRigsTHs.toFixed(8)} \n`+
@@ -656,7 +659,8 @@ class AutoRenter {
                     name: inputOptions.name,
                     userOptions: inputOptions,
                     db: {
-                        CostOfRentalBtc: Number(returnData.rentals[0].status.cost).toFixed(8)
+                        CostOfRentalBtc: Number(returnData.rentals[0].status.cost).toFixed(8),
+                        duration: badges[0].duration
                     },
                     message: `Current cost of rental in BTC :  ${Number(returnData.rentals[0].status.cost).toFixed(8)} \n`+
                     `${badges[0].label}: ${Number(badges[0].totalHashes).toFixed(8)} \n`+
