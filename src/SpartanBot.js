@@ -52,7 +52,7 @@ class SpartanBot {
 		this.pools = []
 		this.poolProfiles = []
 		this.receipts = []
-
+		this.renting = false
 		this.emitter = new EventEmitter()
 		this.setupListeners()
 
@@ -601,6 +601,7 @@ class SpartanBot {
 	 * @async
 	 * @returns {Promise<Array.<Object>>}
 	 */
+
 	async updatePool(id, options) {
 		let updatedPools = [];
 		let res;
